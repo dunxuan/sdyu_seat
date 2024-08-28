@@ -49,10 +49,15 @@ def get_seat(seat_area):
     return r.json()["data"]["list"]
 
 
+def save_config(conf):
+    with open("conf.toml", "wb") as f:
+        tomli_w.dump(conf, f)
+
+
 def init_config():
     global conf
     # 区域
-    df = pd.read_csv("area.csv")
+    df = pd.read_csv(os.path.realpath(os.path.dirname(__file__)) + os.sep + "area.csv")
     print(df.to_string(index=False))
     while True:
         conf["seat"]["seat_area"] = int(input("输入区域id:"))
@@ -66,11 +71,11 @@ def init_config():
     min_seat = data[0]["no"]
     max_seat = data[-1]["no"]
     while True:
-        seat_no = input(f"输入座位号 ({min_seat}~{max_seat}):")
+        seat_no = int(input(f"输入座位号 ({min_seat}~{max_seat}):"))
         if seat_no >= int(min_seat) and seat_no <= int(max_seat):
             for item in data:
-                if item["no"] == seat_no:
-                    conf["seat"]["seat_id"] = int(item["id"])
+                if int(item["no"]) == seat_no:
+                    conf["seat"]["seat_id"] = item["id"]
                     break
             break
         else:
@@ -83,8 +88,7 @@ def init_config():
     conf = get_cookies(conf)
 
     conf["init"] = False
-    with open("conf.toml", "wb") as f:
-        tomli_w.dump(conf, f)
+    save_config(conf)
     return conf
 
 
@@ -130,8 +134,7 @@ def get_cookies(force=False):
     conf["data"]["date"] = datetime.date.today()
     conf["data"]["segment"] = get_segment(conf["seat"]["seat_area"])
 
-    with open("conf.toml", "wb") as f:
-        tomli_w.dump(conf, f)
+    save_config(conf)
     return conf
 
 
@@ -285,7 +288,7 @@ def check_release(current_version):
 
 if __name__ == "__main__":
     # 检查更新
-    current_version = "v1.2.2"
+    current_version = "v1.2.3"
     check_release(current_version)
 
     main()
