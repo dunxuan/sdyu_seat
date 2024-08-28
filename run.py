@@ -1,18 +1,16 @@
 import datetime
 import os
 import re
+import sys
 from time import sleep
 import tomllib
+import webbrowser
 from bs4 import BeautifulSoup
 import tomli_w
 import requests
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-
-
-def get_release():
-    pass
 
 
 def get_config():
@@ -248,9 +246,6 @@ def get_reserved():
 
 
 def main():
-    # 检查更新
-    get_release()
-
     # 读取配置
     global conf
     conf = get_config()
@@ -274,7 +269,26 @@ def main():
     print("如果没有明天的座位信息，说明抢座失败了")
 
 
+def check_release(current_version):
+    url = "https://api.github.com/repos/dunxuan/sdyu_seat/tags"
+    latest_tag = requests.get(url=url).json()[0]["name"]
+    if latest_tag != current_version:
+        print(
+            f"自动下载中，下完了解压并覆盖:https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_tag}/sdyu_seat_{latest_tag}.zip"
+        )
+        webbrowser.open(
+            f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_tag}/sdyu_seat_{latest_tag}.zip"
+        )
+        os.system("pause")
+        sys.exit(0)
+
+
 if __name__ == "__main__":
+    print(os.path.realpath(os.path.dirname(sys.argv[0])))
+    current_version = "v1.2"
+    # 检查更新
+    check_release(current_version)
+
     main()
-    # print("程序已运行完毕，按任意键继续...")
+
     os.system("pause")

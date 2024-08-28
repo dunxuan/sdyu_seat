@@ -1,0 +1,1 @@
+pyinstaller -F --add-data area.csv:. run.py
