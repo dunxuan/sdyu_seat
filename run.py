@@ -277,10 +277,10 @@ def check_release(current_version):
     latest_tag = requests.get(url=url).json()[0]["name"]
     if latest_tag != current_version:
         print(
-            f"自动下载中，下完了解压并覆盖:https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_tag}/sdyu_seat_{latest_tag}.zip"
+            f"自动下载中，下完了解压并覆盖:https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_tag}/sdyu_seat.exe"
         )
         webbrowser.open(
-            f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_tag}/sdyu_seat_{latest_tag}.zip"
+            f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_tag}/sdyu_seat.exe"
         )
         os.system("pause")
         sys.exit(0)
@@ -288,7 +288,7 @@ def check_release(current_version):
 
 if __name__ == "__main__":
     # 检查更新
-    current_version = "v1.2.3"
+    current_version = "1.2.4"
     check_release(current_version)
 
     main()
