@@ -3,4 +3,4 @@ __pycache__
 build
 dist
 conf.toml
-run.spec
+*.spec

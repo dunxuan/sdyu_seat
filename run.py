@@ -1,11 +1,12 @@
 import datetime
 import os
 import re
-import sys
+import subprocess
 from time import sleep
 import tomllib
-import webbrowser
+import wget
 from bs4 import BeautifulSoup
+from packaging.version import Version
 import tomli_w
 import requests
 import pandas as pd
@@ -57,7 +58,7 @@ def save_config(conf):
 def init_config():
     global conf
     # 区域
-    df = pd.read_csv(os.path.realpath(os.path.dirname(__file__)) + os.sep + "area.csv")
+    df = pd.read_csv(f"{os.path.realpath(os.path.dirname(__file__))}\\area.csv")
     print(df.to_string(index=False))
     while True:
         conf["seat"]["seat_area"] = int(input("输入区域id:"))
@@ -274,21 +275,34 @@ def main():
 
 def check_release(current_version):
     url = "https://api.github.com/repos/dunxuan/sdyu_seat/tags"
-    latest_tag = requests.get(url=url).json()[0]["name"]
-    if latest_tag != current_version:
-        print(
-            f"自动下载中，下完了解压并覆盖:https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_tag}/sdyu_seat.exe"
-        )
-        webbrowser.open(
-            f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_tag}/sdyu_seat.exe"
-        )
-        os.system("pause")
-        sys.exit(0)
+    latest_version = requests.get(url=url).json()[0]["name"]
+
+    if Version(latest_version) > Version(current_version):
+        print(f"有新版本({latest_version})了，更新后会自动重启程序")
+        url = f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
+        wget.download(url, f"sdyu_seat_{latest_version}.exe")
+
+        script_file = "upgrade.ps1"
+        script_contents = f"""$programName = "sdyu_seat.exe"
+while (Get-Process -Name $programName -ErrorAction SilentlyContinue) {{ }}
+Remove-Item $programName
+$newFileName = "sdyu_seat_{latest_version}.exe"
+Rename-Item -Path $newFileName -NewName $programName
+Start-Process -FilePath $programName
+Remove-Item -Path $MyInvocation.MyCommand.Path -Force
+"""
+
+        with open(script_file, "w") as f:
+            f.write(script_contents)
+        subprocess.Popen(["powershell", "-File", script_file], shell=True)
+    else:
+        print(f"已是最新({latest_version})")
 
 
 if __name__ == "__main__":
     # 检查更新
-    current_version = "1.2.4"
+    current_version = "1.3"
+    print("检查更新中……", end="")
     check_release(current_version)
 
     main()
