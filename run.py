@@ -285,7 +285,7 @@ def check_release(current_version):
 
 if __name__ == "__main__":
     # 检查更新
-    current_version = "v1.1.1"
+    current_version = "v1.2.2"
     check_release(current_version)
 
     main()
