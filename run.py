@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 
 
 def get_config():
+    global conf
     if not os.path.exists("conf.toml"):
         conf = {
             "seat": {"seat_area": None, "seat_id": None},
@@ -46,13 +47,8 @@ def get_seat(seat_area):
     return r.json()["data"]["list"]
 
 
-def get_segment(seat_area):
-    url = f"https://lxl.sdyu.edu.cn/api.php/v3areadays/{seat_area}"
-    r = requests.get(url=url)
-    return r.json()["data"]["list"][1]["id"]
-
-
-def init_config(conf):
+def init_config():
+    global conf
     # 区域
     df = pd.read_csv("area.csv")
     print(df.to_string(index=False))
@@ -87,7 +83,14 @@ def init_config(conf):
     return conf
 
 
-def get_cookies(conf, force=False):
+def get_segment(seat_area):
+    url = f"https://lxl.sdyu.edu.cn/api.php/v3areadays/{seat_area}"
+    r = requests.get(url=url)
+    return r.json()["data"]["list"][1]["id"]
+
+
+def get_cookies(force=False):
+    global conf
     if conf["data"]["date"] == datetime.date.today() and force is False:
         return conf
 
@@ -128,13 +131,38 @@ def get_cookies(conf, force=False):
 
 
 def wait_12():
+    global conf
     target_time = datetime.datetime.now().replace(hour=12, minute=0, second=0)
-    while datetime.datetime.now() < target_time:
+    i = 0
+    url = "https://lxl.sdyu.edu.cn/user/index/book"
+    cookies = dict(
+        PHPSESSID=conf["data"]["PHPSESSID"],
+        access_token=conf["data"]["access_token"],
+        expire=conf["data"]["expire"],
+        user_name=conf["data"]["user_name"],
+        userid=conf["data"]["userid"],
+    )
+    while True:
+        if i % 1000000 == 0:
+            r = requests.get(url=url, cookies=cookies)
+            if len(r.history) == 2:
+                print("已在其他设备登录，正在重新登录")
+                conf = get_cookies(force=True)
+                cookies = dict(
+                    PHPSESSID=conf["data"]["PHPSESSID"],
+                    access_token=conf["data"]["access_token"],
+                    expire=conf["data"]["expire"],
+                    user_name=conf["data"]["user_name"],
+                    userid=conf["data"]["userid"],
+                )
+        i += 1
+        if datetime.datetime.now() >= target_time:
+            return
         print(f"\r没到点呢:{datetime.datetime.now()}", end="")
-    return
 
 
-def grab_seat(conf):
+def grab_seat():
+    global conf
     url = f"https://lxl.sdyu.edu.cn/api.php/spaces/{conf['seat']['seat_id']}/book"
     data = {
         "access_token": conf["data"]["access_token"],
@@ -178,14 +206,20 @@ def grab_seat(conf):
                 print("你约过别的位了")
                 break
             if r.json()["msg"] == "由于您长时间未操作，正在重新登录":
-                conf = get_cookies(conf, force=True)
-                grab_seat(conf)
-                break
+                conf = get_cookies(force=True)
+                cookies = dict(
+                    PHPSESSID=conf["data"]["PHPSESSID"],
+                    access_token=conf["data"]["access_token"],
+                    expire=conf["data"]["expire"],
+                    user_name=conf["data"]["user_name"],
+                    userid=conf["data"]["userid"],
+                )
         elif r.json()["status"] == 1:
             break
 
 
-def get_reserved(conf):
+def get_reserved():
+    global conf
     cookies = dict(
         PHPSESSID=conf["data"]["PHPSESSID"],
         access_token=conf["data"]["access_token"],
@@ -207,24 +241,25 @@ def get_reserved(conf):
 
 def main():
     # 读取配置
+    global conf
     conf = get_config()
     if conf["init"]:
-        conf = init_config(conf)
+        conf = init_config()
     print("初始化完成")
 
     # Cookies
-    conf = get_cookies(conf)
+    conf = get_cookies()
     print("开始抢座")
 
     # 计时
     wait_12()
 
     # 抢座
-    grab_seat(conf)
+    grab_seat()
     print()
 
     # 查看预约状态
-    get_reserved(conf)
+    get_reserved()
     print("如果没有明天的座位信息，说明抢座失败了")
 
 
