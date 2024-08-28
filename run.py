@@ -284,9 +284,8 @@ def check_release(current_version):
 
 
 if __name__ == "__main__":
-    print(os.path.realpath(os.path.dirname(sys.argv[0])))
-    current_version = "v1.2"
     # 检查更新
+    current_version = "v1.1.1"
     check_release(current_version)
 
     main()
