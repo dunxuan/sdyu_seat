@@ -11,6 +11,10 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 
+def get_release():
+    pass
+
+
 def get_config():
     global conf
     if not os.path.exists("conf.toml"):
@@ -64,9 +68,12 @@ def init_config():
     min_seat = data[0]["no"]
     max_seat = data[-1]["no"]
     while True:
-        seat_no = int(input(f"输入座位号 ({min_seat}~{max_seat}):"))
+        seat_no = input(f"输入座位号 ({min_seat}~{max_seat}):")
         if seat_no >= int(min_seat) and seat_no <= int(max_seat):
-            conf["seat"]["seat_id"] = (seat_no - int(min_seat)) + data[0]["id"]
+            for item in data:
+                if item["no"] == seat_no:
+                    conf["seat"]["seat_id"] = int(item["id"])
+                    break
             break
         else:
             print("号不对啊")
@@ -157,6 +164,7 @@ def wait_12():
                 )
         i += 1
         if datetime.datetime.now() >= target_time:
+            print()
             return
         print(f"\r没到点呢:{datetime.datetime.now()}", end="")
 
@@ -240,6 +248,9 @@ def get_reserved():
 
 
 def main():
+    # 检查更新
+    get_release()
+
     # 读取配置
     global conf
     conf = get_config()
