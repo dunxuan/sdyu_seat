@@ -1,1 +1,1 @@
-pyinstaller -F --add-data area.csv:. run.py
+pyinstaller -F -n sdyu_seat --add-data area.csv:. run.py
