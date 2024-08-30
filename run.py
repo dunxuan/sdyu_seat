@@ -14,6 +14,52 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
+current_version = "1.3.1"
+
+
+def check_network():
+    url = "https://www.sdyu.edu.cn"
+    try:
+        requests.get(url=url)
+    except requests.exceptions.SSLError:
+        webbrowser.open(url="http://123.123.123.123/")
+        exit()
+
+
+def check_release(current_version):
+    url = "https://api.github.com/repos/dunxuan/sdyu_seat/tags"
+    try:
+        latest_version = requests.get(url=url).json()[0]["name"]
+    except (
+        requests.exceptions.RequestException
+        or requests.Timeout
+        or requests.exceptions.SSLError
+    ):
+        print(f"检查更新失败({current_version})")
+        return False
+
+    if Version(latest_version) > Version(current_version):
+        print(f"有新版本({latest_version})了，更新后会自动重启程序")
+        url = f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
+        wget.download(url, f"sdyu_seat_{latest_version}.exe")
+
+        script_file = "upgrade.ps1"
+        script_contents = f"""$programName = "sdyu_seat.exe"
+while (Get-Process -Name $programName -ErrorAction SilentlyContinue) {{ }}
+Remove-Item $programName
+$newFileName = "sdyu_seat_{latest_version}.exe"
+Rename-Item -Path $newFileName -NewName $programName
+Start-Process -FilePath $programName
+Remove-Item -Path $MyInvocation.MyCommand.Path -Force
+"""
+
+        with open(script_file, "w") as f:
+            f.write(script_contents)
+        subprocess.Popen(["powershell", "-File", script_file], shell=True)
+    else:
+        print(f"已是最新({current_version})")
+        return True
+
 
 def get_config():
     global conf
@@ -218,7 +264,6 @@ def grab_seat():
                 break
             except requests.Timeout:
                 pass
-        print(r.json()["msg"])
 
         if r.json()["status"] == 0:
             if (
@@ -243,6 +288,7 @@ def grab_seat():
                     userid=conf["data"]["userid"],
                 )
         elif r.json()["status"] == 1:
+            print(r.json()["msg"])
             break
 
 
@@ -273,6 +319,13 @@ def get_reserved():
 
 
 def main():
+    # 检查网络情况
+    check_network()
+
+    # 检查更新
+    print("检查更新中……", end="")
+    check_release(current_version)
+
     # 读取配置
     global conf
     conf = get_config()
@@ -296,59 +349,7 @@ def main():
     print("如果没有明天的座位信息，说明抢座失败了")
 
 
-def check_release(current_version):
-    url = "https://api.github.com/repos/dunxuan/sdyu_seat/tags"
-    try:
-        latest_version = requests.get(url=url).json()[0]["name"]
-    except (
-        requests.exceptions.RequestException
-        or requests.Timeout
-        or requests.exceptions.SSLError
-    ):
-        print(f"检查更新失败({current_version})")
-        return False
-
-    if Version(latest_version) > Version(current_version):
-        print(f"有新版本({latest_version})了，更新后会自动重启程序")
-        url = f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
-        wget.download(url, f"sdyu_seat_{latest_version}.exe")
-
-        script_file = "upgrade.ps1"
-        script_contents = f"""$programName = "sdyu_seat.exe"
-while (Get-Process -Name $programName -ErrorAction SilentlyContinue) {{ }}
-Remove-Item $programName
-$newFileName = "sdyu_seat_{latest_version}.exe"
-Rename-Item -Path $newFileName -NewName $programName
-Start-Process -FilePath $programName
-Remove-Item -Path $MyInvocation.MyCommand.Path -Force
-"""
-
-        with open(script_file, "w") as f:
-            f.write(script_contents)
-        subprocess.Popen(["powershell", "-File", script_file], shell=True)
-    else:
-        print(f"已是最新({current_version})")
-        return True
-
-
-def check_network():
-    url = "https://www.sdyu.edu.cn"
-    try:
-        requests.get(url=url)
-    except requests.exceptions.SSLError:
-        webbrowser.open(url="http://123.123.123.123/")
-        exit()
-
-
 if __name__ == "__main__":
-    # 检查网络情况
-    check_network()
-
-    # 检查更新
-    current_version = "1.3.1"
-    print("检查更新中……", end="")
-    check_release(current_version)
-
     main()
 
     os.system("pause")
