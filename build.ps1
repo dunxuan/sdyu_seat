@@ -1,1 +1,1 @@
-pyinstaller -F -n sdyu_seat --add-data area.csv:. run.py
+nuitka --standalone --onefile --include-data-files=./area.csv=./ --output-filename=sdyu_seat run.py
