@@ -4,6 +4,7 @@ import re
 import subprocess
 from time import sleep
 import tomllib
+import webbrowser
 import wget
 from bs4 import BeautifulSoup
 from packaging.version import Version
@@ -12,6 +13,52 @@ import requests
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+
+current_version = "1.3.1"
+
+
+def check_network():
+    url = "https://www.sdyu.edu.cn"
+    try:
+        requests.get(url=url)
+    except requests.exceptions.SSLError:
+        webbrowser.open(url="http://123.123.123.123/")
+        exit()
+
+
+def check_release(current_version):
+    url = "https://api.github.com/repos/dunxuan/sdyu_seat/tags"
+    try:
+        latest_version = requests.get(url=url).json()[0]["name"]
+    except (
+        requests.exceptions.RequestException
+        or requests.Timeout
+        or requests.exceptions.SSLError
+    ):
+        print(f"检查更新失败({current_version})")
+        return False
+
+    if Version(latest_version) > Version(current_version):
+        print(f"有新版本({latest_version})了，更新后会自动重启程序")
+        url = f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
+        wget.download(url, f"sdyu_seat_{latest_version}.exe")
+
+        script_file = "upgrade.ps1"
+        script_contents = f"""$programName = "sdyu_seat.exe"
+while (Get-Process -Name $programName -ErrorAction SilentlyContinue) {{ }}
+Remove-Item $programName
+$newFileName = "sdyu_seat_{latest_version}.exe"
+Rename-Item -Path $newFileName -NewName $programName
+Start-Process -FilePath $programName
+Remove-Item -Path $MyInvocation.MyCommand.Path -Force
+"""
+
+        with open(script_file, "w") as f:
+            f.write(script_contents)
+        subprocess.Popen(["powershell", "-File", script_file], shell=True)
+    else:
+        print(f"已是最新({current_version})")
+        return True
 
 
 def get_config():
@@ -46,7 +93,12 @@ def get_seat(seat_area):
         "startTime": "08:30",
         "endTime": "22:30",
     }
-    r = requests.get(url=url, params=params)
+    while True:
+        try:
+            r = requests.get(url=url, params=params)
+            break
+        except requests.Timeout:
+            pass
     return r.json()["data"]["list"]
 
 
@@ -95,7 +147,12 @@ def init_config():
 
 def get_segment(seat_area):
     url = f"https://lxl.sdyu.edu.cn/api.php/v3areadays/{seat_area}"
-    r = requests.get(url=url)
+    while True:
+        try:
+            r = requests.get(url=url)
+            break
+        except requests.Timeout:
+            pass
     return r.json()["data"]["list"][1]["id"]
 
 
@@ -153,7 +210,12 @@ def wait_12():
     )
     while True:
         if i % 1000000 == 0:
-            r = requests.get(url=url, cookies=cookies)
+            while True:
+                try:
+                    r = requests.get(url=url, cookies=cookies)
+                    break
+                except requests.Timeout:
+                    pass
             if len(r.history) == 2:
                 print("已在其他设备登录，正在重新登录")
                 conf = get_cookies(force=True)
@@ -192,15 +254,16 @@ def grab_seat():
         user_name=conf["data"]["user_name"],
         userid=conf["data"]["userid"],
     )
-    retry_times = 10
+    retry_times = 3
     for _ in range(retry_times):
-        r = requests.post(
-            url=url,
-            data=data,
-            headers=headers,
-            cookies=cookies,
-        )
-        print(r.json()["msg"])
+        while True:
+            try:
+                r = requests.post(
+                    url=url, data=data, headers=headers, cookies=cookies, timeout=5
+                )
+                break
+            except requests.Timeout:
+                pass
 
         if r.json()["status"] == 0:
             if (
@@ -225,6 +288,7 @@ def grab_seat():
                     userid=conf["data"]["userid"],
                 )
         elif r.json()["status"] == 1:
+            print(r.json()["msg"])
             break
 
 
@@ -237,7 +301,12 @@ def get_reserved():
         user_name=conf["data"]["user_name"],
         userid=conf["data"]["userid"],
     )
-    r = requests.get("https://lxl.sdyu.edu.cn/user/index/book", cookies=cookies)
+    while True:
+        try:
+            r = requests.get("https://lxl.sdyu.edu.cn/user/index/book", cookies=cookies)
+            break
+        except requests.Timeout:
+            pass
     for tr in (
         BeautifulSoup(r.text, "html.parser")
         .find("table", id="menu_table")
@@ -250,6 +319,13 @@ def get_reserved():
 
 
 def main():
+    # 检查网络情况
+    check_network()
+
+    # 检查更新
+    print("检查更新中……", end="")
+    check_release(current_version)
+
     # 读取配置
     global conf
     conf = get_config()
@@ -273,38 +349,7 @@ def main():
     print("如果没有明天的座位信息，说明抢座失败了")
 
 
-def check_release(current_version):
-    url = "https://api.github.com/repos/dunxuan/sdyu_seat/tags"
-    latest_version = requests.get(url=url).json()[0]["name"]
-
-    if Version(latest_version) > Version(current_version):
-        print(f"有新版本({latest_version})了，更新后会自动重启程序")
-        url = f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
-        wget.download(url, f"sdyu_seat_{latest_version}.exe")
-
-        script_file = "upgrade.ps1"
-        script_contents = f"""$programName = "sdyu_seat.exe"
-while (Get-Process -Name $programName -ErrorAction SilentlyContinue) {{ }}
-Remove-Item $programName
-$newFileName = "sdyu_seat_{latest_version}.exe"
-Rename-Item -Path $newFileName -NewName $programName
-Start-Process -FilePath $programName
-Remove-Item -Path $MyInvocation.MyCommand.Path -Force
-"""
-
-        with open(script_file, "w") as f:
-            f.write(script_contents)
-        subprocess.Popen(["powershell", "-File", script_file], shell=True)
-    else:
-        print(f"已是最新({latest_version})")
-
-
 if __name__ == "__main__":
-    # 检查更新
-    current_version = "1.3"
-    print("检查更新中……", end="")
-    check_release(current_version)
-
     main()
 
     os.system("pause")
