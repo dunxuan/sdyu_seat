@@ -3,5 +3,4 @@ __pycache__
 build
 *dist
 conf.toml
-*.spec
 *.exe

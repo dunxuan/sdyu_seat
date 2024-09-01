@@ -2,6 +2,7 @@ import datetime
 import os
 import re
 import subprocess
+import sys
 from time import sleep
 import tomllib
 import webbrowser
@@ -14,7 +15,7 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.1"
+current_version = "1.3.2"
 
 
 def check_network():
@@ -44,8 +45,8 @@ def check_release(current_version):
         wget.download(url, f"sdyu_seat_{latest_version}.exe")
 
         script_file = "upgrade.ps1"
-        script_contents = f"""$programName = "sdyu_seat.exe"
-while (Get-Process -Name $programName -ErrorAction SilentlyContinue) {{ }}
+        script_contents = f"""$programName = {os.path.basename(sys.argv[0])}
+while ((& tasklist) -match $programName -or (Get-Process -Name $programName -ErrorAction SilentlyContinue)) {{ }}
 Remove-Item $programName
 $newFileName = "sdyu_seat_{latest_version}.exe"
 Rename-Item -Path $newFileName -NewName $programName
@@ -56,6 +57,7 @@ Remove-Item -Path $MyInvocation.MyCommand.Path -Force
         with open(script_file, "w") as f:
             f.write(script_contents)
         subprocess.Popen(["powershell", "-File", script_file], shell=True)
+        sys.exit()
     else:
         print(f"已是最新({current_version})")
         return True
