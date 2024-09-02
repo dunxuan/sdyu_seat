@@ -15,7 +15,7 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.2"
+current_version = "1.3.3.1"
 
 
 def check_network():
@@ -45,7 +45,7 @@ def check_release(current_version):
         wget.download(url, f"sdyu_seat_{latest_version}.exe")
 
         script_file = "upgrade.ps1"
-        script_contents = f"""$programName = {os.path.basename(sys.argv[0])}
+        script_contents = f"""$programName = "{os.path.basename(sys.argv[0])}"
 while ((& tasklist) -match $programName -or (Get-Process -Name $programName -ErrorAction SilentlyContinue)) {{ }}
 Remove-Item $programName
 $newFileName = "sdyu_seat_{latest_version}.exe"
