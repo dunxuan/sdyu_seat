@@ -28,9 +28,9 @@ def check_network():
 
 
 def check_release(current_version):
-    url = "https://api.github.com/repos/dunxuan/sdyu_seat/tags"
+    url = "https://api.github.com/repos/dunxuan/sdyu_seat/releases/latest"
     try:
-        latest_version = requests.get(url=url).json()[0]["name"]
+        latest_version = requests.get(url=url).json()["name"]
     except (
         requests.exceptions.RequestException
         or requests.Timeout
@@ -256,42 +256,39 @@ def grab_seat():
         user_name=conf["data"]["user_name"],
         userid=conf["data"]["userid"],
     )
-    retry_times = 3
+    retry_times = 10
     for _ in range(retry_times):
         while True:
             try:
                 r = requests.post(
                     url=url, data=data, headers=headers, cookies=cookies, timeout=5
-                )
+                ).json()
                 break
-            except requests.Timeout:
+            except requests.Timeout or requests.exceptions.JSONDecodeError:
                 pass
 
-        if r.json()["status"] == 0:
-            if (
-                r.json()["msg"] == "参数错误"
-                or r.json()["msg"] == "该空间当前状态不可预约"
-            ):
-                print("来晚了，被约了")
+            if r["status"] == 0:
+                if r["msg"] == "参数错误" or r["msg"] == "该空间当前状态不可预约":
+                    print("来晚了，被约了")
+                    break
+                if r["msg"] == "预约超时，请重新预约":
+                    print("可能约成功了，重试……")
+                    sleep(1)
+                if r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
+                    print("你约过别的位了")
+                    break
+                if r["msg"] == "由于您长时间未操作，正在重新登录":
+                    conf = get_cookies(force=True)
+                    cookies = dict(
+                        PHPSESSID=conf["data"]["PHPSESSID"],
+                        access_token=conf["data"]["access_token"],
+                        expire=conf["data"]["expire"],
+                        user_name=conf["data"]["user_name"],
+                        userid=conf["data"]["userid"],
+                    )
+            elif r["status"] == 1:
+                print(r["msg"])
                 break
-            if r.json()["msg"] == "预约超时，请重新预约":
-                print("可能约成功了，重试……")
-                sleep(1)
-            if r.json()["msg"] == "当前用户在该时段已存在预约，不可重复预约":
-                print("你约过别的位了")
-                break
-            if r.json()["msg"] == "由于您长时间未操作，正在重新登录":
-                conf = get_cookies(force=True)
-                cookies = dict(
-                    PHPSESSID=conf["data"]["PHPSESSID"],
-                    access_token=conf["data"]["access_token"],
-                    expire=conf["data"]["expire"],
-                    user_name=conf["data"]["user_name"],
-                    userid=conf["data"]["userid"],
-                )
-        elif r.json()["status"] == 1:
-            print(r.json()["msg"])
-            break
 
 
 def get_reserved():
@@ -306,18 +303,18 @@ def get_reserved():
     while True:
         try:
             r = requests.get("https://lxl.sdyu.edu.cn/user/index/book", cookies=cookies)
+            for tr in (
+                BeautifulSoup(r.text, "html.parser")
+                .find("table", id="menu_table")
+                .select("tbody tr")
+            ):
+                tds = tr.find_all("td")
+                if "预约成功" in tds[4].text:
+                    print(re.sub(r"\s|\t|\n", "", tds[1].text), end="\t\t")
+                    print(re.sub(r"\s|\t|\n", "", tds[2].text[0:10]))
             break
-        except requests.Timeout:
+        except requests.Timeout or AttributeError:
             pass
-    for tr in (
-        BeautifulSoup(r.text, "html.parser")
-        .find("table", id="menu_table")
-        .select("tbody tr")
-    ):
-        tds = tr.find_all("td")
-        if "预约成功" in tds[4].text:
-            print(re.sub(r"\s|\t|\n", "", tds[1].text), end="\t\t")
-            print(re.sub(r"\s|\t|\n", "", tds[2].text[0:10]))
 
 
 def main():
