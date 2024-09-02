@@ -15,7 +15,27 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.3.1"
+current_version = "1.3.4"
+
+
+def do_upgrade():
+    if sys.argv[1] == "--upgrade":
+        script_file = "upgrade.ps1"
+        script_contents = f"""$oldFileName = "{sys.argv[2]}"
+$newFileName = "{os.path.basename(sys.argv[0])}"
+$programName = "sdyu_seat.exe"
+while ((& tasklist) -match $oldFileName -or (Get-Process -Name $oldFileName -ErrorAction SilentlyContinue)) {{ }}
+Remove-Item $oldFileName
+while ((& tasklist) -match $newFileName -or (Get-Process -Name $newFileName -ErrorAction SilentlyContinue)) {{ }}
+Rename-Item -Path $newFileName -NewName $programName
+Start-Process -FilePath $programName
+Remove-Item -Path $MyInvocation.MyCommand.Path -Force
+"""
+
+        with open(script_file, "w") as f:
+            f.write(script_contents)
+        subprocess.Popen(["powershell", "-File", script_file], shell=True)
+        sys.exit()
 
 
 def check_network():
@@ -24,7 +44,7 @@ def check_network():
         requests.get(url=url)
     except requests.exceptions.SSLError:
         webbrowser.open(url="http://123.123.123.123/")
-        exit()
+        sys.exit()
 
 
 def check_release(current_version):
@@ -44,19 +64,13 @@ def check_release(current_version):
         url = f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
         wget.download(url, f"sdyu_seat_{latest_version}.exe")
 
-        script_file = "upgrade.ps1"
-        script_contents = f"""$programName = "{os.path.basename(sys.argv[0])}"
-while ((& tasklist) -match $programName -or (Get-Process -Name $programName -ErrorAction SilentlyContinue)) {{ }}
-Remove-Item $programName
-$newFileName = "sdyu_seat_{latest_version}.exe"
-Rename-Item -Path $newFileName -NewName $programName
-Start-Process -FilePath $programName
-Remove-Item -Path $MyInvocation.MyCommand.Path -Force
-"""
-
-        with open(script_file, "w") as f:
-            f.write(script_contents)
-        subprocess.Popen(["powershell", "-File", script_file], shell=True)
+        subprocess.Popen(
+            [
+                f"sdyu_seat_{latest_version}.exe",
+                "--upgrade",
+                f"{os.path.basename(sys.argv[0])}",
+            ]
+        )
         sys.exit()
     else:
         print(f"已是最新({current_version})")
@@ -318,6 +332,10 @@ def get_reserved():
 
 
 def main():
+    if len(sys.argv) > 1:
+        # 进行更新
+        do_upgrade()
+
     # 检查网络情况
     check_network()
 
