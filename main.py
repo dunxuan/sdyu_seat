@@ -5,7 +5,6 @@ import subprocess
 import sys
 from time import sleep
 import tomllib
-import webbrowser
 import wget
 from bs4 import BeautifulSoup
 from packaging.version import Version
@@ -15,40 +14,49 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.4"
+current_version = "1.3.5"
 
 
 def do_upgrade():
-    if sys.argv[1] == "--upgrade":
-        script_file = "upgrade.ps1"
-        script_contents = f"""$oldFileName = "{sys.argv[2]}"
+    if sys.argv[1] != "--upgrade":
+        return
+    script_file = "upgrade.ps1"
+    script_contents = f"""$oldFileName = "{sys.argv[2]}"
 $newFileName = "{os.path.basename(sys.argv[0])}"
 $programName = "sdyu_seat.exe"
-while ((& tasklist) -match $oldFileName -or (Get-Process -Name $oldFileName -ErrorAction SilentlyContinue)) {{ }}
+while ((Get-WmiObject Win32_Process | Where-Object {{ $_.Name -match $oldFileName }}) -or ((& tasklist) -match $oldFileName) -or (Get-Process -Name $oldFileName -ErrorAction SilentlyContinue)) {{ }}
+while ((Get-WmiObject Win32_Process | Where-Object {{ $_.Name -match $newFileName }}) -or ((& tasklist) -match $newFileName) -or (Get-Process -Name $newFileName -ErrorAction SilentlyContinue)) {{ }}
 Remove-Item $oldFileName
-while ((& tasklist) -match $newFileName -or (Get-Process -Name $newFileName -ErrorAction SilentlyContinue)) {{ }}
 Rename-Item -Path $newFileName -NewName $programName
 Start-Process -FilePath $programName
 Remove-Item -Path $MyInvocation.MyCommand.Path -Force
 """
 
-        with open(script_file, "w") as f:
-            f.write(script_contents)
-        subprocess.Popen(["powershell", "-File", script_file], shell=True)
-        sys.exit()
+    with open(script_file, "w") as f:
+        f.write(script_contents)
+    subprocess.Popen(
+        [
+            "powershell",
+            "-Command",
+            f"Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force; & './{script_file}'",
+        ],
+        shell=True,
+    )
 
 
 def check_network():
-    url = "https://www.sdyu.edu.cn"
-    try:
-        requests.get(url=url)
-    except requests.exceptions.SSLError:
-        webbrowser.open(url="http://123.123.123.123/")
-        sys.exit()
+    url = "http://baidu.com"
+    while True:
+        try:
+            requests.get(url=url)
+            break
+        except requests.exceptions.SSLError:
+            print("\r连不上啊，登校园网了吗？http://123.123.123.123/")
+            os.system("pause")
 
 
 def check_release(current_version):
-    url = "https://api.github.com/repos/dunxuan/sdyu_seat/releases/latest"
+    url = "https://api.github.com/repos/dunxuan/sdyu_seat/releases/tags/0"
     try:
         latest_version = requests.get(url=url).json()["name"]
     except (
@@ -66,10 +74,12 @@ def check_release(current_version):
 
         subprocess.Popen(
             [
-                f"sdyu_seat_{latest_version}.exe",
+                "start",
+                f"./sdyu_seat_{latest_version}.exe",
                 "--upgrade",
                 f"{os.path.basename(sys.argv[0])}",
-            ]
+            ],
+            shell=True,
         )
         sys.exit()
     else:
@@ -270,7 +280,7 @@ def grab_seat():
         user_name=conf["data"]["user_name"],
         userid=conf["data"]["userid"],
     )
-    retry_times = 10
+    retry_times = 3
     for _ in range(retry_times):
         while True:
             try:
@@ -281,28 +291,28 @@ def grab_seat():
             except requests.Timeout or requests.exceptions.JSONDecodeError:
                 pass
 
-            if r["status"] == 0:
-                if r["msg"] == "参数错误" or r["msg"] == "该空间当前状态不可预约":
-                    print("来晚了，被约了")
-                    break
-                if r["msg"] == "预约超时，请重新预约":
-                    print("可能约成功了，重试……")
-                    sleep(1)
-                if r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
-                    print("你约过别的位了")
-                    break
-                if r["msg"] == "由于您长时间未操作，正在重新登录":
-                    conf = get_cookies(force=True)
-                    cookies = dict(
-                        PHPSESSID=conf["data"]["PHPSESSID"],
-                        access_token=conf["data"]["access_token"],
-                        expire=conf["data"]["expire"],
-                        user_name=conf["data"]["user_name"],
-                        userid=conf["data"]["userid"],
-                    )
-            elif r["status"] == 1:
-                print(r["msg"])
+        if r["status"] == 0:
+            if r["msg"] == "参数错误" or r["msg"] == "该空间当前状态不可预约":
+                print("来晚了，被约了")
                 break
+            if r["msg"] == "预约超时，请重新预约":
+                print("可能约成功了，重试……")
+                sleep(1)
+            if r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
+                print("你约过别的位了")
+                break
+            if r["msg"] == "由于您长时间未操作，正在重新登录":
+                conf = get_cookies(force=True)
+                cookies = dict(
+                    PHPSESSID=conf["data"]["PHPSESSID"],
+                    access_token=conf["data"]["access_token"],
+                    expire=conf["data"]["expire"],
+                    user_name=conf["data"]["user_name"],
+                    userid=conf["data"]["userid"],
+                )
+        elif r["status"] == 1:
+            print(r["msg"])
+            break
 
 
 def get_reserved():
