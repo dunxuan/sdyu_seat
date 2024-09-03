@@ -56,7 +56,7 @@ def check_network():
 
 
 def check_release(current_version):
-    url = "https://api.github.com/repos/dunxuan/sdyu_seat/releases/tags/0"
+    url = "https://api.github.com/repos/dunxuan/sdyu_seat/releases/latest"
     try:
         latest_version = requests.get(url=url).json()["name"]
     except (
