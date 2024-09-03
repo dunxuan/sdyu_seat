@@ -14,7 +14,7 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.5"
+current_version = "1.3.5.2"
 
 
 def do_upgrade():
