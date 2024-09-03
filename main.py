@@ -1,3 +1,4 @@
+import csv
 import datetime
 import os
 import re
@@ -5,16 +6,16 @@ import subprocess
 import sys
 from time import sleep
 import tomllib
+from tabulate import tabulate
 import wget
 from bs4 import BeautifulSoup
 from packaging.version import Version
 import tomli_w
 import requests
-import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.5.2"
+current_version = "1.3.6"
 
 
 def do_upgrade():
@@ -136,11 +137,21 @@ def save_config(conf):
 def init_config():
     global conf
     # 区域
-    df = pd.read_csv(f"{os.path.realpath(os.path.dirname(__file__))}\\area.csv")
-    print(df.to_string(index=False))
+    data = []
+    with open(
+        f"{os.path.realpath(os.path.dirname(__file__))}\\area.csv",
+        "r",
+        newline="",
+        encoding="utf-8",
+    ) as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            data.append(row)
+    print(tabulate(data, headers="firstrow", tablefmt="github"))
     while True:
-        conf["seat"]["seat_area"] = int(input("输入区域id:"))
-        if conf["seat"]["seat_area"] in df["id"].values:
+        seat_area = int(input("输入区域 id: "))
+        ids = [int(row[0]) for row in data]
+        if seat_area in ids:
             break
         else:
             print("号不对啊")
@@ -291,28 +302,31 @@ def grab_seat():
             except requests.Timeout or requests.exceptions.JSONDecodeError:
                 pass
 
-        if r["status"] == 0:
-            if r["msg"] == "参数错误" or r["msg"] == "该空间当前状态不可预约":
-                print("来晚了，被约了")
+        try:
+            if r["status"] == 0:
+                if r["msg"] == "参数错误" or r["msg"] == "该空间当前状态不可预约":
+                    print("来晚了，被约了")
+                    break
+                if r["msg"] == "预约超时，请重新预约":
+                    print("可能约成功了，重试……")
+                    sleep(1)
+                if r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
+                    print("你约过别的位了")
+                    break
+                if r["msg"] == "由于您长时间未操作，正在重新登录":
+                    conf = get_cookies(force=True)
+                    cookies = dict(
+                        PHPSESSID=conf["data"]["PHPSESSID"],
+                        access_token=conf["data"]["access_token"],
+                        expire=conf["data"]["expire"],
+                        user_name=conf["data"]["user_name"],
+                        userid=conf["data"]["userid"],
+                    )
+            elif r["status"] == 1:
+                print(r["msg"])
                 break
-            if r["msg"] == "预约超时，请重新预约":
-                print("可能约成功了，重试……")
-                sleep(1)
-            if r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
-                print("你约过别的位了")
-                break
-            if r["msg"] == "由于您长时间未操作，正在重新登录":
-                conf = get_cookies(force=True)
-                cookies = dict(
-                    PHPSESSID=conf["data"]["PHPSESSID"],
-                    access_token=conf["data"]["access_token"],
-                    expire=conf["data"]["expire"],
-                    user_name=conf["data"]["user_name"],
-                    userid=conf["data"]["userid"],
-                )
-        elif r["status"] == 1:
-            print(r["msg"])
-            break
+        except KeyError:
+            pass
 
 
 def get_reserved():

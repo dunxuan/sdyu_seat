@@ -1,1 +1,1 @@
-& nuitka --standalone --onefile --include-data-files=./area.csv=./ --output-filename=sdyu_seat ./main.py
+& pyinstaller -F -n sdyu_seat --add-data area.csv:. ./main.py
