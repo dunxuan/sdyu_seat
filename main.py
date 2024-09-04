@@ -15,7 +15,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.6"
+current_version = "1.3.6.1"
 
 
 def do_upgrade():
@@ -150,8 +150,36 @@ def init_config():
     print(tabulate(data, headers="firstrow", tablefmt="github"))
     while True:
         seat_area = int(input("输入区域 id: "))
-        ids = [int(row[0]) for row in data]
+        ids = [
+            5,
+            7,
+            8,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            37,
+            38,
+            39,
+            40,
+        ]
         if seat_area in ids:
+            conf["seat"]["seat_area"] = seat_area
             break
         else:
             print("号不对啊")
