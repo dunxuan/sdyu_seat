@@ -15,7 +15,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.6.1"
+current_version = "1.3.7"
 
 
 def do_upgrade():
@@ -49,9 +49,10 @@ def check_network():
     url = "http://baidu.com"
     while True:
         try:
-            requests.get(url=url)
+            r = requests.get(url=url)
+            r.raise_for_status()
             break
-        except requests.exceptions.SSLError:
+        except Exception:
             print("\r连不上啊，登校园网了吗？http://123.123.123.123/")
             os.system("pause")
 
@@ -60,11 +61,7 @@ def check_release(current_version):
     url = "https://api.github.com/repos/dunxuan/sdyu_seat/releases/latest"
     try:
         latest_version = requests.get(url=url).json()["name"]
-    except (
-        requests.exceptions.RequestException
-        or requests.Timeout
-        or requests.exceptions.SSLError
-    ):
+    except Exception:
         print(f"检查更新失败({current_version})")
         return False
 
@@ -124,7 +121,7 @@ def get_seat(seat_area):
         try:
             r = requests.get(url=url, params=params)
             break
-        except requests.Timeout:
+        except Exception:
             pass
     return r.json()["data"]["list"]
 
@@ -216,7 +213,7 @@ def get_segment(seat_area):
         try:
             r = requests.get(url=url)
             break
-        except requests.Timeout:
+        except Exception:
             pass
     return r.json()["data"]["list"][1]["id"]
 
@@ -279,7 +276,7 @@ def wait_12():
                 try:
                     r = requests.get(url=url, cookies=cookies)
                     break
-                except requests.Timeout:
+                except Exception:
                     pass
             if len(r.history) == 2:
                 print("已在其他设备登录，正在重新登录")
@@ -327,7 +324,7 @@ def grab_seat():
                     url=url, data=data, headers=headers, cookies=cookies, timeout=5
                 ).json()
                 break
-            except requests.Timeout or requests.exceptions.JSONDecodeError:
+            except Exception:
                 pass
 
         try:
@@ -353,7 +350,7 @@ def grab_seat():
             elif r["status"] == 1:
                 print(r["msg"])
                 break
-        except KeyError:
+        except Exception:
             pass
 
 
@@ -379,7 +376,7 @@ def get_reserved():
                     print(re.sub(r"\s|\t|\n", "", tds[1].text), end="\t\t")
                     print(re.sub(r"\s|\t|\n", "", tds[2].text[0:10]))
             break
-        except requests.Timeout or AttributeError:
+        except Exception:
             pass
 
 
