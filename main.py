@@ -15,7 +15,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.7"
+current_version = "1.3.8"
 
 
 def do_upgrade():
@@ -46,7 +46,7 @@ Remove-Item -Path $MyInvocation.MyCommand.Path -Force
 
 
 def check_network():
-    url = "http://baidu.com"
+    url = "https://baidu.com"
     while True:
         try:
             r = requests.get(url=url)
@@ -147,34 +147,7 @@ def init_config():
     print(tabulate(data, headers="firstrow", tablefmt="github"))
     while True:
         seat_area = int(input("输入区域 id: "))
-        ids = [
-            5,
-            7,
-            8,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-            26,
-            28,
-            29,
-            30,
-            31,
-            32,
-            33,
-            34,
-            35,
-            37,
-            38,
-            39,
-            40,
-        ]
+        ids = [int(item[0]) for item in data[1:]]
         if seat_area in ids:
             conf["seat"]["seat_area"] = seat_area
             break
@@ -316,12 +289,20 @@ def grab_seat():
         user_name=conf["data"]["user_name"],
         userid=conf["data"]["userid"],
     )
+
     retry_times = 3
-    for _ in range(retry_times):
+    i = 0
+    while i < retry_times:
+        j = 1
         while True:
+            timeout = 5 * j if 5 * j <= 30 else 30
             try:
                 r = requests.post(
-                    url=url, data=data, headers=headers, cookies=cookies, timeout=5
+                    url=url,
+                    data=data,
+                    headers=headers,
+                    cookies=cookies,
+                    timeout=timeout,
                 ).json()
                 break
             except Exception:
@@ -330,15 +311,15 @@ def grab_seat():
         try:
             if r["status"] == 0:
                 if r["msg"] == "参数错误" or r["msg"] == "该空间当前状态不可预约":
-                    print("来晚了，被约了")
+                    print("来晚了，被约了:{}".format(r["msg"]))
                     break
                 if r["msg"] == "预约超时，请重新预约":
-                    print("可能约成功了，重试……")
-                    sleep(1)
+                    print("可能约成功了，重试……:{}".format(r["msg"]))
                 if r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
-                    print("你约过别的位了")
+                    print("你约过别的位了:{}".format(r["msg"]))
                     break
                 if r["msg"] == "由于您长时间未操作，正在重新登录":
+                    print(r["msg"])
                     conf = get_cookies(force=True)
                     cookies = dict(
                         PHPSESSID=conf["data"]["PHPSESSID"],
@@ -347,9 +328,11 @@ def grab_seat():
                         user_name=conf["data"]["user_name"],
                         userid=conf["data"]["userid"],
                     )
+                    i -= 1
             elif r["status"] == 1:
                 print(r["msg"])
                 break
+            i += 1
         except Exception:
             pass
 
@@ -397,21 +380,24 @@ def main():
     conf = get_config()
     if conf["init"]:
         conf = init_config()
-    print("初始化完成")
+    print("\n初始化完成")
 
     # Cookies
     conf = get_cookies()
-    print("开始抢座")
+
+    print("\n开始抢座")
 
     # 计时
     wait_12()
 
     # 抢座
     grab_seat()
-    print()
+
+    print("\n查询预约状态……")
 
     # 查看预约状态
     get_reserved()
+
     print("如果没有明天的座位信息，说明抢座失败了")
 
 
