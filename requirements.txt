@@ -1,6 +1,6 @@
+tabulate
 wget
 beautifulsoup4
 tomli_w
 requests
-pandas
 selenium
