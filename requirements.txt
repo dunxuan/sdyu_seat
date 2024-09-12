@@ -1,6 +1,7 @@
 tabulate
 wget
 beautifulsoup4
+packaging
 tomli_w
 requests
 selenium
