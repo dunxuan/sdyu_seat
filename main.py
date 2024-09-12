@@ -15,7 +15,21 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.3.8"
+current_version = "1.4"
+
+
+def time_sync():
+    subprocess.Popen(
+        [
+            "Powershell",
+            "Start-Job",
+            "-ScriptBlock",
+            "{ net start w32time; w32tm /resync /force }",
+        ],
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 def do_upgrade():
@@ -43,6 +57,7 @@ Remove-Item -Path $MyInvocation.MyCommand.Path -Force
         ],
         shell=True,
     )
+    sys.exit()
 
 
 def check_network():
@@ -199,6 +214,7 @@ def get_cookies(force=False):
     options = webdriver.EdgeOptions()
     options.add_argument("--start-maximized")
     options.add_experimental_option("detach", True)
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])
     driver = webdriver.Edge(options=options)
     driver.get(
         "https://iids.sdyu.edu.cn/cas/login?service=https://lxl.sdyu.edu.cn/cas/index.php?callback=https://lxl.sdyu.edu.cn/home/web/f_second"
@@ -278,9 +294,22 @@ def grab_seat():
         "type": "1",
         "operateChannel": "2",
     }
+    day = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
     headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0",
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Host": "lxl.sdyu.edu.cn",
+        "Origin": "https://lxl.sdyu.edu.cn",
+        "Referer": f"https://lxl.sdyu.edu.cn/web/seat3?area={conf['seat']['seat_area']}&segment={conf['data']['segment']}&day={day}&startTime=18:00&endTime=22:30",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0",
+        "X-Requested-With": "XMLHttpRequest",
+        "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Microsoft Edge";v="128"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
     }
     cookies = dict(
         PHPSESSID=conf["data"]["PHPSESSID"],
@@ -364,6 +393,9 @@ def get_reserved():
 
 
 def main():
+    # 校时
+    time_sync()
+
     if len(sys.argv) > 1:
         # 进行更新
         do_upgrade()
