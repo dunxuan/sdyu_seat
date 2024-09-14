@@ -260,6 +260,9 @@ def wait_12():
     )
     while True:
         now = datetime.datetime.now()
+        if now >= target_time:
+            print()
+            return
         if now.second == 1:
             check_network()
             while True:
@@ -278,9 +281,6 @@ def wait_12():
                     user_name=conf["data"]["user_name"],
                     userid=conf["data"]["userid"],
                 )
-        if now >= target_time:
-            print()
-            return
         print(f"\r没到点呢:{now}", end="")
 
 
