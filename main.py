@@ -15,7 +15,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4"
+current_version = "1.4.1"
 
 
 def time_sync():
@@ -250,7 +250,6 @@ def get_cookies(force=False):
 def wait_12():
     global conf
     target_time = datetime.datetime.now().replace(hour=12, minute=0, second=0)
-    i = 0
     url = "https://lxl.sdyu.edu.cn/user/index/book"
     cookies = dict(
         PHPSESSID=conf["data"]["PHPSESSID"],
@@ -260,7 +259,9 @@ def wait_12():
         userid=conf["data"]["userid"],
     )
     while True:
-        if i % 1000000 == 0:
+        now = datetime.datetime.now()
+        if now.second == 1:
+            check_network()
             while True:
                 try:
                     r = requests.get(url=url, cookies=cookies)
@@ -277,11 +278,10 @@ def wait_12():
                     user_name=conf["data"]["user_name"],
                     userid=conf["data"]["userid"],
                 )
-        i += 1
-        if datetime.datetime.now() >= target_time:
+        if now >= target_time:
             print()
             return
-        print(f"\r没到点呢:{datetime.datetime.now()}", end="")
+        print(f"\r没到点呢:{now}", end="")
 
 
 def grab_seat():
@@ -340,12 +340,11 @@ def grab_seat():
         try:
             if r["status"] == 0:
                 if r["msg"] == "参数错误" or r["msg"] == "该空间当前状态不可预约":
-                    print("来晚了，被约了:{}".format(r["msg"]))
-                    break
+                    print(f"重试……({r['msg']})")
                 if r["msg"] == "预约超时，请重新预约":
-                    print("可能约成功了，重试……:{}".format(r["msg"]))
+                    print(f"重试……({r['msg']})")
                 if r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
-                    print("你约过别的位了:{}".format(r["msg"]))
+                    print(f"你约过别的位了({r['msg']})")
                     break
                 if r["msg"] == "由于您长时间未操作，正在重新登录":
                     print(r["msg"])
@@ -417,10 +416,10 @@ def main():
     # Cookies
     conf = get_cookies()
 
-    print("\n开始抢座")
-
     # 计时
     wait_12()
+
+    print("\n开始抢座……")
 
     # 抢座
     grab_seat()
