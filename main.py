@@ -1,21 +1,19 @@
 import csv
 import datetime
 import os
-import re
 import subprocess
 import sys
 from time import sleep
 import tomllib
 from tabulate import tabulate
 import wget
-from bs4 import BeautifulSoup
 from packaging.version import Version
 import tomli_w
 import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.1"
+current_version = "1.4.2"
 
 
 def time_sync():
@@ -251,13 +249,6 @@ def wait_12():
     global conf
     target_time = datetime.datetime.now().replace(hour=12, minute=0, second=0)
     url = "https://lxl.sdyu.edu.cn/user/index/book"
-    cookies = dict(
-        PHPSESSID=conf["data"]["PHPSESSID"],
-        access_token=conf["data"]["access_token"],
-        expire=conf["data"]["expire"],
-        user_name=conf["data"]["user_name"],
-        userid=conf["data"]["userid"],
-    )
     while True:
         now = datetime.datetime.now()
         if now >= target_time:
@@ -265,6 +256,13 @@ def wait_12():
             return
         if now.second == 1:
             check_network()
+            cookies = dict(
+                PHPSESSID=conf["data"]["PHPSESSID"],
+                access_token=conf["data"]["access_token"],
+                expire=conf["data"]["expire"],
+                user_name=conf["data"]["user_name"],
+                userid=conf["data"]["userid"],
+            )
             while True:
                 try:
                     r = requests.get(url=url, cookies=cookies)
@@ -274,13 +272,6 @@ def wait_12():
             if len(r.history) == 2:
                 print("已在其他设备登录，正在重新登录")
                 conf = get_cookies(force=True)
-                cookies = dict(
-                    PHPSESSID=conf["data"]["PHPSESSID"],
-                    access_token=conf["data"]["access_token"],
-                    expire=conf["data"]["expire"],
-                    user_name=conf["data"]["user_name"],
-                    userid=conf["data"]["userid"],
-                )
         print(f"\r没到点呢:{now}", end="")
 
 
@@ -311,82 +302,91 @@ def grab_seat():
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
     }
-    cookies = dict(
-        PHPSESSID=conf["data"]["PHPSESSID"],
-        access_token=conf["data"]["access_token"],
-        expire=conf["data"]["expire"],
-        user_name=conf["data"]["user_name"],
-        userid=conf["data"]["userid"],
-    )
 
     retry_times = 3
-    i = 0
-    while i < retry_times:
-        j = 1
+    for _ in range(retry_times):
+        cookies = dict(
+            PHPSESSID=conf["data"]["PHPSESSID"],
+            access_token=conf["data"]["access_token"],
+            expire=conf["data"]["expire"],
+            user_name=conf["data"]["user_name"],
+            userid=conf["data"]["userid"],
+        )
         while True:
-            timeout = 5 * j if 5 * j <= 30 else 30
             try:
                 r = requests.post(
                     url=url,
                     data=data,
                     headers=headers,
                     cookies=cookies,
-                    timeout=timeout,
+                    timeout=5,
                 ).json()
                 break
             except Exception:
                 pass
+            finally:
+                print(".", end="")
+                sleep(5)
 
+        print()
         try:
             if r["status"] == 0:
-                if r["msg"] == "参数错误" or r["msg"] == "该空间当前状态不可预约":
-                    print(f"重试……({r['msg']})")
-                if r["msg"] == "预约超时，请重新预约":
-                    print(f"重试……({r['msg']})")
-                if r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
-                    print(f"你约过别的位了({r['msg']})")
+                if (
+                    r["msg"] == "参数错误"
+                    or r["msg"] == "该空间当前状态不可预约"
+                    or r["msg"] == "预约超时，请重新预约"
+                ):
+                    print(f"可能成功（{r['msg']}），重试", end="")
+
+                elif r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
+                    print(f"你约过别的位了（{r['msg']}）")
                     break
-                if r["msg"] == "由于您长时间未操作，正在重新登录":
-                    print(r["msg"])
+
+                elif r["msg"] == "由于您长时间未操作，正在重新登录":
+                    print(r["msg"], end="……")
                     conf = get_cookies(force=True)
-                    cookies = dict(
-                        PHPSESSID=conf["data"]["PHPSESSID"],
-                        access_token=conf["data"]["access_token"],
-                        expire=conf["data"]["expire"],
-                        user_name=conf["data"]["user_name"],
-                        userid=conf["data"]["userid"],
-                    )
-                    i -= 1
+                    print("重试", end="")
+
+                elif r["msg"][:5] == "访问频繁！":
+                    print(r["msg"], end="")
+                    break
+
+                else:
+                    print(r)
+
             elif r["status"] == 1:
-                print(r["msg"])
+                print(r["msg"], end="")
                 break
-            i += 1
         except Exception:
             pass
 
 
 def get_reserved():
     global conf
-    cookies = dict(
-        PHPSESSID=conf["data"]["PHPSESSID"],
-        access_token=conf["data"]["access_token"],
-        expire=conf["data"]["expire"],
-        user_name=conf["data"]["user_name"],
-        userid=conf["data"]["userid"],
-    )
+    day = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
     while True:
+        cookies = dict(
+            PHPSESSID=conf["data"]["PHPSESSID"],
+            access_token=conf["data"]["access_token"],
+            expire=conf["data"]["expire"],
+            user_name=conf["data"]["user_name"],
+            userid=conf["data"]["userid"],
+        )
         try:
-            r = requests.get("https://lxl.sdyu.edu.cn/user/index/book", cookies=cookies)
-            for tr in (
-                BeautifulSoup(r.text, "html.parser")
-                .find("table", id="menu_table")
-                .select("tbody tr")
-            ):
-                tds = tr.find_all("td")
-                if "预约成功" in tds[4].text:
-                    print(re.sub(r"\s|\t|\n", "", tds[1].text), end="\t\t")
-                    print(re.sub(r"\s|\t|\n", "", tds[2].text[0:10]))
-            break
+            r = requests.get(
+                "https://lxl.sdyu.edu.cn/api.php/profile/books", cookies=cookies
+            ).json()
+            data = r["data"]["list"][0]
+            if r["status"] == 1 and data["beginTime"]["date"][:10] == day:
+                print(
+                    f"{data['statusName']}\t{data['spaceDetailInfo']['areaInfo']['nameMerge']} {data['spaceDetailInfo']['no']}\t预约时间:{data['bookTimeSegment']}"
+                )
+                break
+            elif r["status"] == 0 and r["msg"] == "由于您长时间未操作，正在重新登录":
+                print(r["msg"])
+                conf = get_cookies(force=True)
+            else:
+                print(r["msg"])
         except Exception:
             pass
 
@@ -419,17 +419,17 @@ def main():
     # 计时
     wait_12()
 
-    print("\n开始抢座……")
+    print("\n开始抢座", end="")
 
     # 抢座
     grab_seat()
 
-    print("\n查询预约状态……")
+    print("\n\n查询预约状态……")
 
     # 查看预约状态
     get_reserved()
 
-    print("如果没有明天的座位信息，说明抢座失败了")
+    print("\n如果没有明天的座位信息，说明抢座失败了")
 
 
 if __name__ == "__main__":
