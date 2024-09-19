@@ -13,7 +13,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.2"
+current_version = "1.4.3"
 
 
 def time_sync():
@@ -376,17 +376,20 @@ def get_reserved():
             r = requests.get(
                 "https://lxl.sdyu.edu.cn/api.php/profile/books", cookies=cookies
             ).json()
-            data = r["data"]["list"][0]
-            if r["status"] == 1 and data["beginTime"]["date"][:10] == day:
-                print(
-                    f"{data['statusName']}\t{data['spaceDetailInfo']['areaInfo']['nameMerge']} {data['spaceDetailInfo']['no']}\t预约时间:{data['bookTimeSegment']}"
-                )
+            if r["status"] == 1:
+                data = r["data"]["list"][0]
+                if data["beginTime"]["date"][:10] == day:
+                    print(
+                        f"{data['statusName']}\t{data['spaceDetailInfo']['areaInfo']['nameMerge']} {data['spaceDetailInfo']['no']}\t预约时间:{data['bookTimeSegment']}"
+                    )
+                else:
+                    print("抢座失败")
                 break
             elif r["status"] == 0 and r["msg"] == "由于您长时间未操作，正在重新登录":
                 print(r["msg"])
                 conf = get_cookies(force=True)
             else:
-                print(r["msg"])
+                print(f"{r['status']}\t{r['msg']}")
         except Exception:
             pass
 
