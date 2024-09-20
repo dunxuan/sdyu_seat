@@ -13,7 +13,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.3"
+current_version = "1.4.4"
 
 
 def time_sync():
@@ -66,8 +66,9 @@ def check_network():
             r.raise_for_status()
             break
         except Exception:
-            print("\r连不上啊，登校园网了吗？http://123.123.123.123/")
-            os.system("pause")
+            print("\r连不上啊，登校园网了吗？http://123.123.123.123/", end=" ")
+            print(".", end="")
+            sleep(1)
 
 
 def check_release(current_version):
@@ -135,7 +136,7 @@ def get_seat(seat_area):
             r = requests.get(url=url, params=params)
             break
         except Exception:
-            pass
+            sleep(1)
     return r.json()["data"]["list"]
 
 
@@ -200,7 +201,7 @@ def get_segment(seat_area):
             r = requests.get(url=url)
             break
         except Exception:
-            pass
+            sleep(1)
     return r.json()["data"]["list"][1]["id"]
 
 
@@ -268,7 +269,7 @@ def wait_12():
                     r = requests.get(url=url, cookies=cookies)
                     break
                 except Exception:
-                    pass
+                    sleep(1)
             if len(r.history) == 2:
                 print("已在其他设备登录，正在重新登录")
                 conf = get_cookies(force=True)
@@ -326,7 +327,7 @@ def grab_seat():
                 pass
             finally:
                 print(".", end="")
-                sleep(5)
+                sleep(1)
 
         print()
         try:
@@ -391,7 +392,7 @@ def get_reserved():
             else:
                 print(f"{r['status']}\t{r['msg']}")
         except Exception:
-            pass
+            sleep(1)
 
 
 def main():
