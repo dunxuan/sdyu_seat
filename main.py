@@ -324,10 +324,8 @@ def grab_seat():
                 ).json()
                 break
             except Exception:
-                pass
-            finally:
                 print(".", end="")
-                sleep(1)
+            sleep(1)
 
         print()
         try:
