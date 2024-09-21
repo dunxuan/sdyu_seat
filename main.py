@@ -60,17 +60,23 @@ Remove-Item -Path $MyInvocation.MyCommand.Path -Force
 
 def check_network():
     url = "https://baidu.com"
+    f = True
     while True:
         try:
             r = requests.get(url=url)
             r.raise_for_status()
             break
         except Exception:
-            print(
-                "\r连不上啊，登校园网了吗？http://123.123.123.123/", end=" ", flush=True
-            )
-            print(".", end="", flush=True)
-            sleep(1)
+            if f:
+                print(
+                    "\r连不上啊，登校园网了吗？http://123.123.123.123/",
+                    end=" ",
+                    flush=True,
+                )
+                f = False
+            else:
+                print(".", end="", flush=True)
+                sleep(1)
 
 
 def check_release(current_version):
