@@ -13,7 +13,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.4.2"
+current_version = "1.4.5"
 
 
 def time_sync():
@@ -66,8 +66,10 @@ def check_network():
             r.raise_for_status()
             break
         except Exception:
-            print("\r连不上啊，登校园网了吗？http://123.123.123.123/", end=" ")
-            print(".", end="")
+            print(
+                "\r连不上啊，登校园网了吗？http://123.123.123.123/", end=" ", flush=True
+            )
+            print(".", end="", flush=True)
             sleep(1)
 
 
@@ -253,7 +255,6 @@ def wait_12():
     while True:
         now = datetime.datetime.now()
         if now >= target_time:
-            print()
             return
         if now.second == 1:
             check_network()
@@ -273,7 +274,7 @@ def wait_12():
             if len(r.history) == 2:
                 print("已在其他设备登录，正在重新登录")
                 conf = get_cookies(force=True)
-        print(f"\r没到点呢:{now}", end="")
+        print(f"\r没到点呢:{now}", end="", flush=True)
 
 
 def grab_seat():
@@ -324,8 +325,9 @@ def grab_seat():
                 ).json()
                 break
             except Exception:
-                print(".", end="")
-            sleep(1)
+                sleep(1)
+            finally:
+                print(".", end="", flush=True)
 
         print()
         try:
@@ -335,29 +337,30 @@ def grab_seat():
                     or r["msg"] == "该空间当前状态不可预约"
                     or r["msg"] == "预约超时，请重新预约"
                 ):
-                    print(f"可能成功（{r['msg']}），重试", end="")
+                    print(f"可能成功（{r['msg']}），重试", end="", flush=True)
 
                 elif r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
                     print(f"你约过别的位了（{r['msg']}）")
                     break
 
                 elif r["msg"] == "由于您长时间未操作，正在重新登录":
-                    print(r["msg"], end="……")
+                    print(r["msg"], end="……", flush=True)
                     conf = get_cookies(force=True)
-                    print("重试", end="")
+                    print("重试", end="", flush=True)
 
                 elif r["msg"][:5] == "访问频繁！":
-                    print(r["msg"], end="")
+                    print(r["msg"], end="", flush=True)
                     break
 
                 else:
                     print(r)
 
             elif r["status"] == 1:
-                print(r["msg"], end="")
+                print(r["msg"], end="", flush=True)
                 break
+
         except Exception:
-            pass
+            sleep(1)
 
 
 def get_reserved():
@@ -405,7 +408,7 @@ def main():
     check_network()
 
     # 检查更新
-    print("检查更新中……", end="")
+    print("检查更新中……", end="", flush=True)
     check_release(current_version)
 
     # 读取配置
@@ -421,7 +424,7 @@ def main():
     # 计时
     wait_12()
 
-    print("\n开始抢座", end="")
+    print("\n开始抢座", end="", flush=True)
 
     # 抢座
     grab_seat()
