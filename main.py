@@ -13,16 +13,25 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.5.1"
+current_version = "1.4.6"
 
 
 def time_sync():
+    script_file = f"{os.path.realpath(os.path.dirname(__file__))}\\timeSync.ps1"
+    script_contents = '''$service = Get-Service w32time
+    if ($service.Status -eq 'Stopped') {
+        Start-Process powershell -Verb RunAs -ArgumentList "-Command ""Set-Service -Name w32time -StartupType Automatic; Start-Service w32time; w32tm /resync""";
+    }
+    '''
+
+    with open(script_file, "w") as f:
+        f.write(script_contents)
+
     subprocess.Popen(
         [
-            "Powershell",
-            "Start-Job",
-            "-ScriptBlock",
-            "{ net start w32time; w32tm /resync /force }",
+            "powershell",
+            "-Command",
+            f"Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force; & '{script_file}'",
         ],
         shell=True,
         stdout=subprocess.DEVNULL,
@@ -33,6 +42,7 @@ def time_sync():
 def do_upgrade():
     if sys.argv[1] != "--upgrade":
         return
+
     script_file = "upgrade.ps1"
     script_contents = f"""$oldFileName = "{sys.argv[2]}"
 $newFileName = "{os.path.basename(sys.argv[0])}"
@@ -47,6 +57,7 @@ Remove-Item -Path $MyInvocation.MyCommand.Path -Force
 
     with open(script_file, "w") as f:
         f.write(script_contents)
+
     subprocess.Popen(
         [
             "powershell",
