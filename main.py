@@ -34,6 +34,8 @@ def time_sync():
             f"Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force; & '{script_file}'",
         ],
         shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
 
