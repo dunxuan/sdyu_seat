@@ -13,7 +13,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.6"
+current_version = "1.4.7"
 
 
 def time_sync():
@@ -76,6 +76,7 @@ def check_network():
         try:
             r = requests.get(url=url)
             r.raise_for_status()
+            print()
             break
         except Exception:
             if f:
@@ -333,16 +334,19 @@ def grab_seat():
         )
         while True:
             try:
-                r = requests.post(
+                response = requests.post(
                     url=url,
                     data=data,
                     headers=headers,
                     cookies=cookies,
                     timeout=5,
-                ).json()
+                )
+                response.raise_for_status()
+                r = response.json()
                 break
             except Exception:
-                sleep(1)
+                # sleep(1)
+                pass
             finally:
                 print(".", end="", flush=True)
 
@@ -365,7 +369,7 @@ def grab_seat():
                     conf = get_cookies(force=True)
                     print("重试", end="", flush=True)
 
-                elif r["msg"][:5] == "访问频繁！":
+                elif r["msg"].startswith("访问频繁！"):
                     print(r["msg"], end="", flush=True)
                     break
 
