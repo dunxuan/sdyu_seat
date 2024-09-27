@@ -101,7 +101,7 @@ def check_release(current_version):
 
     if Version(latest_version) > Version(current_version):
         print(f"有新版本({latest_version})了，更新后会自动重启程序")
-        url = f"https://mirror.ghproxy.com/?q=https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
+        url = f"https://gp.dunxuan.xyz/https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
         wget.download(url, f"sdyu_seat_{latest_version}.exe")
 
         subprocess.Popen(
