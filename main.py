@@ -13,7 +13,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.8"
+current_version = "1.4.8.1"
 
 
 def time_sync():
@@ -76,12 +76,11 @@ def check_network():
         try:
             r = requests.get(url=url)
             r.raise_for_status()
-            print()
             break
         except Exception:
             if f:
                 print(
-                    "\r连不上啊，登校园网了吗？http://123.123.123.123/",
+                    "\n连不上啊，登校园网了吗？http://123.123.123.123/",
                     end=" ",
                     flush=True,
                 )
@@ -339,7 +338,7 @@ def grab_seat():
                     data=data,
                     headers=headers,
                     cookies=cookies,
-                    timeout=5,
+                    timeout=30,
                 )
                 response.raise_for_status()
                 r = response.json()
