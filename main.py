@@ -13,7 +13,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.9"
+current_version = "1.4.10"
 
 
 def time_sync():
