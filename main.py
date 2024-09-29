@@ -13,7 +13,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.9"
+current_version = "1.4.10"
 
 
 def time_sync():
@@ -268,29 +268,29 @@ def get_cookies(force=False):
 def wait_12():
     global conf
     target_time = datetime.datetime.now().replace(hour=12, minute=0, second=0)
-    url = "https://lxl.sdyu.edu.cn/user/index/book"
+    url = "https://lxl.sdyu.edu.cn/api.php/profile/books"
     while True:
         now = datetime.datetime.now()
         if now >= target_time:
             return
         if now.second == 1:
             check_network()
-            cookies = dict(
-                PHPSESSID=conf["data"]["PHPSESSID"],
-                access_token=conf["data"]["access_token"],
-                expire=conf["data"]["expire"],
-                user_name=conf["data"]["user_name"],
-                userid=conf["data"]["userid"],
-            )
             while True:
+                cookies = dict(
+                    PHPSESSID=conf["data"]["PHPSESSID"],
+                    access_token=conf["data"]["access_token"],
+                    expire=conf["data"]["expire"],
+                    user_name=conf["data"]["user_name"],
+                    userid=conf["data"]["userid"],
+                )
                 try:
-                    r = requests.get(url=url, cookies=cookies)
+                    r = requests.get(url=url, cookies=cookies).json()
                     break
                 except Exception:
                     sleep(1)
-            if len(r.history) == 2:
-                print("已在其他设备登录，正在重新登录")
-                conf = get_cookies(force=True)
+                if r["status"] == 0:
+                    print("已在其他设备登录，正在重新登录")
+                    conf = get_cookies(force=True)
         print(f"\r没到点呢:{now}", end="", flush=True)
 
 
@@ -385,20 +385,32 @@ def grab_seat():
 
 def get_reserved():
     global conf
-    url = (
-        f"https://lxl.sdyu.edu.cn/api.php/currentuse?user={conf['account']['username']}"
-    )
+    day = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    url = "https://lxl.sdyu.edu.cn/api.php/profile/books"
     while True:
+        cookies = dict(
+            PHPSESSID=conf["data"]["PHPSESSID"],
+            access_token=conf["data"]["access_token"],
+            expire=conf["data"]["expire"],
+            user_name=conf["data"]["user_name"],
+            userid=conf["data"]["userid"],
+        )
         try:
-            r = requests.get(url=url).json()
-            data = [data for data in r["data"] if data["statusname"] != "使用中"]
-            if not data:
-                print("预约失败")
-            for data in data:
-                print(
-                    f"{data['statusname']}\t{data['nameMerge']}:{data['spaceName']}\t预约时间:{data['beginTime']['date']}"
-                )
-            break
+            r = requests.get(url=url, cookies=cookies).json()
+            if r["status"] == 1:
+                data = r["data"]["list"][0]
+                if data["beginTime"]["date"][:10] == day:
+                    print(
+                        f"{data['statusName']}\t{data['spaceDetailInfo']['areaInfo']['nameMerge']} {data['spaceDetailInfo']['no']}\t预约时间:{data['bookTimeSegment']}"
+                    )
+                else:
+                    print("抢座失败")
+                break
+            elif r["status"] == 0 and r["msg"] == "由于您长时间未操作，正在重新登录":
+                print(r["msg"])
+                conf = get_cookies(force=True)
+            else:
+                print(f"{r['status']}\t{r['msg']}")
         except Exception:
             sleep(1)
 
