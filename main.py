@@ -13,7 +13,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
-current_version = "1.4.8.1"
+current_version = "1.4.9"
 
 
 def time_sync():
@@ -100,7 +100,7 @@ def check_release(current_version):
 
     if Version(latest_version) > Version(current_version):
         print(f"有新版本({latest_version})了，更新后会自动重启程序")
-        url = f"https://gp.dunxuan.xyz/https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
+        url = f"https://gh-proxy.com/https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
         wget.download(url, f"sdyu_seat_{latest_version}.exe")
 
         subprocess.Popen(
@@ -385,33 +385,20 @@ def grab_seat():
 
 def get_reserved():
     global conf
-    day = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+    url = (
+        f"https://lxl.sdyu.edu.cn/api.php/currentuse?user={conf['account']['username']}"
+    )
     while True:
-        cookies = dict(
-            PHPSESSID=conf["data"]["PHPSESSID"],
-            access_token=conf["data"]["access_token"],
-            expire=conf["data"]["expire"],
-            user_name=conf["data"]["user_name"],
-            userid=conf["data"]["userid"],
-        )
         try:
-            r = requests.get(
-                "https://lxl.sdyu.edu.cn/api.php/profile/books", cookies=cookies
-            ).json()
-            if r["status"] == 1:
-                data = r["data"]["list"][0]
-                if data["beginTime"]["date"][:10] == day:
-                    print(
-                        f"{data['statusName']}\t{data['spaceDetailInfo']['areaInfo']['nameMerge']} {data['spaceDetailInfo']['no']}\t预约时间:{data['bookTimeSegment']}"
-                    )
-                else:
-                    print("抢座失败")
-                break
-            elif r["status"] == 0 and r["msg"] == "由于您长时间未操作，正在重新登录":
-                print(r["msg"])
-                conf = get_cookies(force=True)
-            else:
-                print(f"{r['status']}\t{r['msg']}")
+            r = requests.get(url=url).json()
+            data = [data for data in r["data"] if data["statusname"] != "使用中"]
+            if not data:
+                print("预约失败")
+            for data in data:
+                print(
+                    f"{data['statusname']}\t{data['nameMerge']}:{data['spaceName']}\t预约时间:{data['beginTime']['date']}"
+                )
+            break
         except Exception:
             sleep(1)
 
