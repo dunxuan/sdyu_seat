@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.3"
+current_version = "1.5.4"
 
 
 def time_sync():
@@ -50,8 +50,8 @@ while ((Get-WmiObject Win32_Process | Where-Object {{ $_.Name -match $oldFileNam
 while ((Get-WmiObject Win32_Process | Where-Object {{ $_.Name -match $newFileName }}) -or ((& tasklist) -match $newFileName) -or (Get-Process -Name $newFileName -ErrorAction SilentlyContinue)) {{ }}
 Remove-Item $oldFileName
 Rename-Item -Path $newFileName -NewName $programName
-Start-Process -FilePath $programName
 Remove-Item conf.toml
+Start-Process -FilePath $programName
 Remove-Item -Path $MyInvocation.MyCommand.Path -Force
 """
 
