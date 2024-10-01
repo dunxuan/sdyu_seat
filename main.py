@@ -50,7 +50,10 @@ while ((Get-WmiObject Win32_Process | Where-Object {{ $_.Name -match $oldFileNam
 while ((Get-WmiObject Win32_Process | Where-Object {{ $_.Name -match $newFileName }}) -or ((& tasklist) -match $newFileName) -or (Get-Process -Name $newFileName -ErrorAction SilentlyContinue)) {{ }}
 Remove-Item $oldFileName
 Rename-Item -Path $newFileName -NewName $programName
-Remove-Item conf.toml
+try {{
+    Remove-Item conf.toml
+}} 
+catch {{ }}
 Start-Process -FilePath $programName
 Remove-Item -Path $MyInvocation.MyCommand.Path -Force
 """
