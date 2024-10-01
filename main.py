@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.1"
+current_version = "1.5.2"
 
 
 def time_sync():
@@ -429,7 +429,7 @@ def grab_seat():
                     print(f"你约过别的位了（{r['msg']}）")
                     break
 
-                elif r["msg"] == "由于您长时间未操作，正在自动登录":
+                elif r["msg"] == "由于您长时间未操作，正在重新登录":
                     print(r["msg"], end="……", flush=True)
                     conf = get_cookies(force=True)
                     print("重试", end="", flush=True)
@@ -472,7 +472,7 @@ def get_reserved():
                     print("抢座失败")
                 break
             elif r["status"] == 0 and r["msg"] == "由于您长时间未操作，正在重新登录":
-                print(r["msg"])
+                print("已在其他设备登录，正在自动登录")
                 conf = get_cookies(force=True)
             else:
                 print(f"{r['status']}\t{r['msg']}")
@@ -481,14 +481,14 @@ def get_reserved():
 
 
 def main():
+    # 进行更新
+    if len(sys.argv) > 1:
+        do_upgrade()
+
     print("开始初始化")
 
     # 校时
     time_sync()
-
-    if len(sys.argv) > 1:
-        # 进行更新
-        do_upgrade()
 
     # 检查网络情况
     check_network()
