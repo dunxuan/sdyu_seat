@@ -5,15 +5,14 @@ import subprocess
 import sys
 from time import sleep
 import tomllib
+from bs4 import BeautifulSoup
 from tabulate import tabulate
 import wget
 from packaging.version import Version
 import tomli_w
 import requests
-from selenium import webdriver
-from selenium.webdriver.common.by import By
 
-current_version = "1.4.10"
+current_version = "1.5"
 
 
 def time_sync():
@@ -52,6 +51,7 @@ while ((Get-WmiObject Win32_Process | Where-Object {{ $_.Name -match $newFileNam
 Remove-Item $oldFileName
 Rename-Item -Path $newFileName -NewName $programName
 Start-Process -FilePath $programName
+Remove-Item conf.toml
 Remove-Item -Path $MyInvocation.MyCommand.Path -Force
 """
 
@@ -74,7 +74,7 @@ def check_network():
     f = True
     while True:
         try:
-            r = requests.get(url=url)
+            r = requests.head(url=url, timeout=5)
             r.raise_for_status()
             break
         except Exception:
@@ -87,7 +87,9 @@ def check_network():
                 f = False
             else:
                 print(".", end="", flush=True)
-                sleep(1)
+            sleep(1)
+    if not f:
+        print("\r")
 
 
 def check_release(current_version):
@@ -95,7 +97,6 @@ def check_release(current_version):
     try:
         latest_version = requests.get(url=url).json()["name"]
     except Exception:
-        print(f"检查更新失败({current_version})")
         return False
 
     if Version(latest_version) > Version(current_version):
@@ -114,7 +115,6 @@ def check_release(current_version):
         )
         sys.exit()
     else:
-        print(f"已是最新({current_version})")
         return True
 
 
@@ -127,7 +127,7 @@ def get_config():
             "data": {
                 "date": None,
                 "segment": None,
-                "PHPSESSID": None,
+                "auto_user_check_url": None,
                 "access_token": None,
                 "expire": None,
                 "user_name": None,
@@ -217,49 +217,116 @@ def get_segment(seat_area):
     url = f"https://lxl.sdyu.edu.cn/api.php/v3areadays/{seat_area}"
     while True:
         try:
-            r = requests.get(url=url)
+            r = requests.get(url=url).json()
             break
         except Exception:
             sleep(1)
-    return r.json()["data"]["list"][1]["id"]
+    return r["data"]["list"][1]["id"]
 
 
 def get_cookies(force=False):
     global conf
-    if conf["data"]["date"] == datetime.date.today() and force is False:
+    if conf["data"]["date"] == datetime.date.today() and not force:
         return conf
 
-    options = webdriver.EdgeOptions()
-    options.add_argument("--start-maximized")
-    options.add_experimental_option("detach", True)
-    options.add_experimental_option("excludeSwitches", ["enable-logging"])
-    driver = webdriver.Edge(options=options)
-    driver.get(
-        "https://iids.sdyu.edu.cn/cas/login?service=https://lxl.sdyu.edu.cn/cas/index.php?callback=https://lxl.sdyu.edu.cn/home/web/f_second"
-    )
+    # url = "https://lxl.sdyu.edu.cn/api.php/logout"
+    # data = {
+    #     "access_token": conf["data"]["access_token"],
+    #     "userid": conf["data"]["userid"],
+    # }
+    # cookies = dict(
+    #     access_token=conf["data"]["access_token"],
+    #     expire=conf["data"]["expire"],
+    #     user_name=conf["data"]["user_name"],
+    #     userid=conf["data"]["userid"],
+    # )
+    # while True:
+    #     try:
+    #         r = requests.post(url=url, data=data, cookies=cookies)
+    #         r.raise_for_status()
+    #         break
+    #     except Exception:
+    #         pass
 
-    driver.find_element(
-        By.XPATH, "/html/body/div/div[2]/div/div/div/div[2]/label/span[2]"
-    ).click()
-    driver.find_element(By.NAME, "username").send_keys(conf["account"]["username"])
-    driver.find_element(By.NAME, "password").send_keys(conf["account"]["password"])
-    driver.find_element(By.NAME, "captcha").click()
+    if conf["data"]["date"] != datetime.date.today():
+        url = "https://iids.sdyu.edu.cn/sso/apis/v2/open/captcha"
+        while True:
+            try:
+                r = requests.get(url=url)
+                r.raise_for_status()
+                token = r.json()["token"]
+                break
+            except Exception:
+                pass
 
-    while True:
-        sleep(1)
-        if driver.current_url == "https://lxl.sdyu.edu.cn/home/web/f_second":
-            break
+        s = requests.Session()
+        url = "https://iids.sdyu.edu.cn/cas/login"
+        params = {
+            "service": "https://lxl.sdyu.edu.cn/cas/index.php?callback=https://lxl.sdyu.edu.cn/home/web/f_second",
+        }
+        while True:
+            try:
+                r = s.get(url=url, params=params)
+                r.raise_for_status()
+                soup = BeautifulSoup(r.text, "html.parser")
+                lt = soup.find("input", {"name": "lt"}).get("value")
+                execution = soup.find("input", {"name": "execution"}).get("value")
+                break
+            except Exception:
+                pass
 
-    conf["data"]["PHPSESSID"] = driver.get_cookie("PHPSESSID")["value"]
-    conf["data"]["access_token"] = driver.get_cookie("access_token")["value"]
-    conf["data"]["expire"] = driver.get_cookie("expire")["value"]
-    conf["data"]["user_name"] = driver.get_cookie("user_name")["value"]
-    conf["data"]["userid"] = driver.get_cookie("userid")["value"]
+        data = {
+            "username": conf["account"]["username"],
+            "password": conf["account"]["password"],
+            "captcha": "123456",
+            "token": token,
+            "_eventId": "submit",
+            "lt": lt,
+            "source": "cas",
+            "execution": execution,
+        }
+        while True:
+            while True:
+                try:
+                    r = s.post(url=url, data=data)
+                    r.raise_for_status()
+                    break
+                except Exception:
+                    pass
 
-    driver.quit()
+            if r.history:
+                break
 
-    conf["data"]["date"] = datetime.date.today()
-    conf["data"]["segment"] = get_segment(conf["seat"]["seat_area"])
+            soup = BeautifulSoup(r.text, "html.parser")
+            print(soup.find("span", {"id": "errormes"}).get("value"))
+            conf["account"]["username"] = input("请输入用户名:")
+            conf["account"]["password"] = input("请输入密码:")
+            data.update(
+                {
+                    "username": conf["account"]["username"],
+                    "password": conf["account"]["password"],
+                }
+            )
+
+        conf["data"]["auto_user_check_url"] = r.url
+        conf["data"]["date"] = datetime.date.today()
+        conf["data"]["segment"] = get_segment(conf["seat"]["seat_area"])
+
+    else:
+        url = conf["data"]["auto_user_check_url"]
+        while True:
+            try:
+                r = requests.head(url=url)
+                r.raise_for_status()
+                break
+            except Exception:
+                pass
+
+    cookies = r.cookies.get_dict()
+    conf["data"]["access_token"] = cookies["access_token"]
+    conf["data"]["expire"] = cookies["expire"]
+    conf["data"]["user_name"] = cookies["user_name"]
+    conf["data"]["userid"] = cookies["userid"]
 
     save_config(conf)
     return conf
@@ -268,16 +335,16 @@ def get_cookies(force=False):
 def wait_12():
     global conf
     target_time = datetime.datetime.now().replace(hour=12, minute=0, second=0)
-    url = "https://lxl.sdyu.edu.cn/api.php/profile/books"
+    url = "https://lxl.sdyu.edu.cn/api.php/profile"
     while True:
         now = datetime.datetime.now()
         if now >= target_time:
             return
-        if now.second == 1:
+        print(f"\r没到点呢:{now}", end="", flush=True)
+        if now.second == 5:
             check_network()
             while True:
                 cookies = dict(
-                    PHPSESSID=conf["data"]["PHPSESSID"],
                     access_token=conf["data"]["access_token"],
                     expire=conf["data"]["expire"],
                     user_name=conf["data"]["user_name"],
@@ -289,9 +356,8 @@ def wait_12():
                 except Exception:
                     sleep(1)
                 if r["status"] == 0:
-                    print("已在其他设备登录，正在重新登录")
+                    print("已在其他设备登录，正在自动登录")
                     conf = get_cookies(force=True)
-        print(f"\r没到点呢:{now}", end="", flush=True)
 
 
 def grab_seat():
@@ -315,9 +381,9 @@ def grab_seat():
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
         "X-Requested-With": "XMLHttpRequest",
-        "sec-ch-ua": '"Chromium";v="128", "Not;A=Brand";v="24", "Microsoft Edge";v="128"',
+        "sec-ch-ua": '"Microsoft Edge";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
     }
@@ -325,7 +391,6 @@ def grab_seat():
     retry_times = 3
     for _ in range(retry_times):
         cookies = dict(
-            PHPSESSID=conf["data"]["PHPSESSID"],
             access_token=conf["data"]["access_token"],
             expire=conf["data"]["expire"],
             user_name=conf["data"]["user_name"],
@@ -363,7 +428,7 @@ def grab_seat():
                     print(f"你约过别的位了（{r['msg']}）")
                     break
 
-                elif r["msg"] == "由于您长时间未操作，正在重新登录":
+                elif r["msg"] == "由于您长时间未操作，正在自动登录":
                     print(r["msg"], end="……", flush=True)
                     conf = get_cookies(force=True)
                     print("重试", end="", flush=True)
@@ -389,7 +454,6 @@ def get_reserved():
     url = "https://lxl.sdyu.edu.cn/api.php/profile/books"
     while True:
         cookies = dict(
-            PHPSESSID=conf["data"]["PHPSESSID"],
             access_token=conf["data"]["access_token"],
             expire=conf["data"]["expire"],
             user_name=conf["data"]["user_name"],
@@ -416,6 +480,8 @@ def get_reserved():
 
 
 def main():
+    print("开始初始化")
+
     # 校时
     time_sync()
 
@@ -427,7 +493,6 @@ def main():
     check_network()
 
     # 检查更新
-    print("检查更新中……", end="", flush=True)
     check_release(current_version)
 
     # 读取配置
@@ -435,9 +500,11 @@ def main():
     conf = get_config()
     if conf["init"]:
         conf = init_config()
+
     print("\n初始化完成")
 
     # Cookies
+    print()
     conf = get_cookies()
 
     # 计时
