@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5"
+current_version = "1.5.1"
 
 
 def time_sync():
@@ -352,12 +352,13 @@ def wait_12():
                 )
                 try:
                     r = requests.get(url=url, cookies=cookies).json()
-                    break
+                    if r["status"] == 0:
+                        print("\n已在其他设备登录，正在自动登录")
+                        conf = get_cookies(force=True)
                 except Exception:
                     sleep(1)
-                if r["status"] == 0:
-                    print("已在其他设备登录，正在自动登录")
-                    conf = get_cookies(force=True)
+                if r["status"] == 1:
+                    break
 
 
 def grab_seat():
