@@ -339,6 +339,7 @@ def wait_12():
     while True:
         now = datetime.datetime.now()
         if now >= target_time:
+            print()
             return
         print(f"\r没到点呢:{now}", end="", flush=True)
         if now.second == 5:
@@ -388,15 +389,15 @@ def grab_seat():
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
     }
+    cookies = dict(
+        access_token=conf["data"]["access_token"],
+        expire=conf["data"]["expire"],
+        user_name=conf["data"]["user_name"],
+        userid=conf["data"]["userid"],
+    )
 
     retry_times = 3
     for _ in range(retry_times):
-        cookies = dict(
-            access_token=conf["data"]["access_token"],
-            expire=conf["data"]["expire"],
-            user_name=conf["data"]["user_name"],
-            userid=conf["data"]["userid"],
-        )
         while True:
             try:
                 response = requests.post(
@@ -430,8 +431,19 @@ def grab_seat():
                     break
 
                 elif r["msg"] == "由于您长时间未操作，正在重新登录":
-                    print(r["msg"], end="……", flush=True)
+                    print("已在其他设备登录，正在自动登录", end="……", flush=True)
                     conf = get_cookies(force=True)
+                    data.update(
+                        {
+                            "access_token": conf["data"]["access_token"],
+                        }
+                    )
+                    cookies.update(
+                        {
+                            "access_token": conf["data"]["access_token"],
+                            "expire": conf["data"]["expire"],
+                        }
+                    )
                     print("重试", end="", flush=True)
 
                 elif r["msg"].startswith("访问频繁！"):
@@ -505,13 +517,12 @@ def main():
     print("\n初始化完成")
 
     # Cookies
-    print()
     conf = get_cookies()
 
     # 计时
     wait_12()
 
-    print("\n开始抢座", end="", flush=True)
+    print("开始抢座", end="", flush=True)
 
     # 抢座
     grab_seat()
