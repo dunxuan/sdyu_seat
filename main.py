@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.6"
+current_version = "1.5.7"
 
 
 def time_sync():
