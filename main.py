@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.6"
+current_version = "1.5.7"
 
 
 def time_sync():
@@ -89,7 +89,7 @@ def check_network():
             else:
                 print(".", end="", flush=True)
             sleep(1)
-    if not f:
+    if f == 0:
         print("\r")
 
 
@@ -514,8 +514,9 @@ def main():
     conf = get_config()
     if conf["init"]:
         conf = init_config()
+        print()
 
-    print("\n初始化完成")
+    print("初始化完成")
 
     # Cookies
     conf = get_cookies()
