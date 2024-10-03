@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.5"
+current_version = "1.5.6"
 
 
 def time_sync():
@@ -70,20 +70,22 @@ Remove-Item -Path $MyInvocation.MyCommand.Path -Force
 
 def check_network():
     url = "https://baidu.com"
-    f = True
+    f = 0
     while True:
         try:
             r = requests.head(url=url, timeout=5)
             r.raise_for_status()
             break
         except Exception:
-            if f:
+            if f == 0:
+                f += 1
+            elif f == 1:
                 print(
                     "\n连不上啊，登校园网了吗？http://123.123.123.123/",
                     end=" ",
                     flush=True,
                 )
-                f = False
+                f += 1
             else:
                 print(".", end="", flush=True)
             sleep(1)
