@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.7"
+current_version = "1.5.8"
 
 
 def time_sync():
@@ -89,8 +89,8 @@ def check_network():
             else:
                 print(".", end="", flush=True)
             sleep(1)
-    if f == 0:
-        print("\r")
+    if f > 0:
+        print("\n")
 
 
 def check_release(current_version):
