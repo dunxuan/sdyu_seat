@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.8"
+current_version = "1.5.9"
 
 
 def time_sync():
@@ -398,7 +398,8 @@ def grab_seat():
     )
 
     retry_times = 3
-    for _ in range(retry_times):
+    i = 0
+    while i < retry_times:
         while True:
             try:
                 response = requests.post(
@@ -432,6 +433,7 @@ def grab_seat():
                     break
 
                 elif r["msg"] == "由于您长时间未操作，正在重新登录":
+                    i -= 1
                     print("已在其他设备登录，正在自动登录", end="……", flush=True)
                     conf = get_cookies(force=True)
                     data.update(
@@ -460,6 +462,8 @@ def grab_seat():
 
         except Exception:
             sleep(1)
+
+        i += 1
 
 
 def get_reserved():
