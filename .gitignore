@@ -2,7 +2,9 @@ __pycache__
 .conda
 build
 *dist
-conf.toml
 *.exe
 test
 *.spec
+
+conf.toml
+timeSync.ps1
