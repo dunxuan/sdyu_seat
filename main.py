@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.10"
+current_version = "1.5.11"
 
 
 def time_sync():
@@ -453,8 +453,8 @@ def grab_seat():
                     print(r["msg"], end="", flush=True)
                     break
 
-                else:
-                    print(r)
+                elif r["msg"] == "预约失败，系统开始预约时间为：12:00":
+                    sleep(1)
 
             elif r["status"] == 1:
                 print(r["msg"], end="", flush=True)
@@ -491,8 +491,10 @@ def get_reserved():
             elif r["status"] == 0 and r["msg"] == "由于您长时间未操作，正在重新登录":
                 print("已在其他设备登录，正在自动登录")
                 conf = get_cookies(force=True)
+            elif r["status"] == 0 and r["data"]["list"] is None:
+                print("抢座失败")
             else:
-                print(f"{r['status']}\t{r['msg']}")
+                continue
         except Exception:
             sleep(1)
 
