@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.11"
+current_version = "1.5.12"
 
 
 def time_sync():
@@ -313,21 +313,21 @@ def get_cookies(force=False):
         conf["data"]["date"] = datetime.date.today()
         conf["data"]["segment"] = get_segment(conf["seat"]["seat_area"])
 
-    else:
-        url = conf["data"]["auto_user_check_url"]
-        while True:
-            try:
-                r = requests.head(url=url)
-                r.raise_for_status()
-                break
-            except Exception:
-                pass
+    url = conf["data"]["auto_user_check_url"]
+    while True:
+        try:
+            r = requests.head(url=url)
+            r.raise_for_status()
 
-    cookies = r.cookies.get_dict()
-    conf["data"]["access_token"] = cookies["access_token"]
-    conf["data"]["expire"] = cookies["expire"]
-    conf["data"]["user_name"] = cookies["user_name"]
-    conf["data"]["userid"] = cookies["userid"]
+            cookies = r.cookies.get_dict()
+            conf["data"]["access_token"] = cookies["access_token"]
+            conf["data"]["expire"] = cookies["expire"]
+            conf["data"]["user_name"] = cookies["user_name"]
+            conf["data"]["userid"] = cookies["userid"]
+
+            break
+        except Exception:
+            pass
 
     save_config(conf)
     return conf
