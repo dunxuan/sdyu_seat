@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.12"
+current_version = "1.5.13"
 
 
 def time_sync():
@@ -418,7 +418,6 @@ def grab_seat():
             finally:
                 print(".", end="", flush=True)
 
-        print()
         try:
             if r["status"] == 0:
                 if (
@@ -426,15 +425,15 @@ def grab_seat():
                     or r["msg"] == "该空间当前状态不可预约"
                     or r["msg"] == "预约超时，请重新预约"
                 ):
-                    print(f"可能成功（{r['msg']}），重试", end="", flush=True)
+                    print(f"\n可能成功（{r['msg']}），重试", end="", flush=True)
 
                 elif r["msg"] == "当前用户在该时段已存在预约，不可重复预约":
-                    print(f"你约过别的位了（{r['msg']}）")
+                    print(f"\n你约过别的位了（{r['msg']}）")
                     break
 
                 elif r["msg"] == "由于您长时间未操作，正在重新登录":
                     i -= 1
-                    print("已在其他设备登录，正在自动登录", end="……", flush=True)
+                    print("\n已在其他设备登录，正在自动登录", end="……", flush=True)
                     conf = get_cookies(force=True)
                     data.update(
                         {
@@ -450,14 +449,15 @@ def grab_seat():
                     print("重试", end="", flush=True)
 
                 elif r["msg"].startswith("访问频繁！"):
-                    print(r["msg"], end="", flush=True)
+                    print(f"\n{r['msg']}", end="", flush=True)
                     break
 
                 elif r["msg"] == "预约失败，系统开始预约时间为：12:00":
+                    i -= 1
                     sleep(1)
 
             elif r["status"] == 1:
-                print(r["msg"], end="", flush=True)
+                print(f"\n{r['msg']}", end="", flush=True)
                 break
 
         except Exception:
