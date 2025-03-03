@@ -1,1 +1,1 @@
-& pyinstaller -F -n sdyu_seat --add-data area.csv:. ./main.py
+& pyinstaller -F -n sdyu_seat --add-data area.csv:. --upx-dir ./upx ./main.py
