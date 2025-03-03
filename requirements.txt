@@ -4,3 +4,5 @@ packaging
 tomli_w
 requests
 selenium
+beautifulsoup4
+pyinstaller

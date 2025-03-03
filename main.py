@@ -12,7 +12,10 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.13"
+current_version = "1.5.14"
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0",
+}
 
 
 def time_sync():
@@ -153,7 +156,7 @@ def get_seat(seat_area):
     }
     while True:
         try:
-            r = requests.get(url=url, params=params)
+            r = requests.get(url=url, params=params, headers=headers)
             break
         except Exception:
             sleep(1)
@@ -207,7 +210,7 @@ def init_config():
     conf["account"]["username"] = input("请输入用户名:")
     conf["account"]["password"] = input("请输入密码:")
 
-    conf = get_cookies(conf)
+    conf = get_cookies(force=True)
 
     conf["init"] = False
     save_config(conf)
@@ -218,7 +221,7 @@ def get_segment(seat_area):
     url = f"https://lxl.sdyu.edu.cn/api.php/v3areadays/{seat_area}"
     while True:
         try:
-            r = requests.get(url=url).json()
+            r = requests.get(url=url, headers=headers).json()
             break
         except Exception:
             sleep(1)
@@ -253,7 +256,7 @@ def get_cookies(force=False):
         url = "https://iids.sdyu.edu.cn/sso/apis/v2/open/captcha"
         while True:
             try:
-                r = requests.get(url=url)
+                r = requests.get(url=url, headers=headers)
                 r.raise_for_status()
                 token = r.json()["token"]
                 break
@@ -267,7 +270,7 @@ def get_cookies(force=False):
         }
         while True:
             try:
-                r = s.get(url=url, params=params)
+                r = s.get(url=url, params=params, headers=headers)
                 r.raise_for_status()
                 soup = BeautifulSoup(r.text, "html.parser")
                 lt = soup.find("input", {"name": "lt"}).get("value")
@@ -289,7 +292,7 @@ def get_cookies(force=False):
         while True:
             while True:
                 try:
-                    r = s.post(url=url, data=data)
+                    r = s.post(url=url, data=data, headers=headers)
                     r.raise_for_status()
                     break
                 except Exception:
@@ -316,7 +319,7 @@ def get_cookies(force=False):
     url = conf["data"]["auto_user_check_url"]
     while True:
         try:
-            r = requests.head(url=url)
+            r = requests.head(url=url, headers=headers)
             r.raise_for_status()
 
             cookies = r.cookies.get_dict()
@@ -353,7 +356,7 @@ def wait_12():
                     userid=conf["data"]["userid"],
                 )
                 try:
-                    r = requests.get(url=url, cookies=cookies).json()
+                    r = requests.get(url=url, cookies=cookies, headers=headers).json()
                     if r["status"] == 0:
                         print("\n已在其他设备登录，正在自动登录")
                         conf = get_cookies(force=True)
@@ -374,7 +377,7 @@ def grab_seat():
         "operateChannel": "2",
     }
     day = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    headers = {
+    book_headers = {
         "Accept": "application/json, text/javascript, */*; q=0.01",
         "Accept-Encoding": "gzip, deflate, br, zstd",
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -384,12 +387,13 @@ def grab_seat():
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.0",
+        # "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0",
         "X-Requested-With": "XMLHttpRequest",
-        "sec-ch-ua": '"Microsoft Edge";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+        "sec-ch-ua": '"Microsoft Edge";v="133", "Not=A?Brand";v="8", "Chromium";v="133"',
         "sec-ch-ua-mobile": "?0",
         "sec-ch-ua-platform": '"Windows"',
     }
+    merged_headers = {**headers, **book_headers}
     cookies = dict(
         access_token=conf["data"]["access_token"],
         expire=conf["data"]["expire"],
@@ -405,7 +409,7 @@ def grab_seat():
                 response = requests.post(
                     url=url,
                     data=data,
-                    headers=headers,
+                    headers=merged_headers,
                     cookies=cookies,
                     timeout=30,
                 )
@@ -478,7 +482,7 @@ def get_reserved():
             userid=conf["data"]["userid"],
         )
         try:
-            r = requests.get(url=url, cookies=cookies).json()
+            r = requests.get(url=url, cookies=cookies, headers=headers).json()
             if r["status"] == 1:
                 data = r["data"]["list"][0]
                 if data["beginTime"]["date"][:10] == day:
