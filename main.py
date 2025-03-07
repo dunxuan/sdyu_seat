@@ -12,7 +12,7 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.5.14"
+current_version = "1.6.0"
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0",
 }
@@ -105,7 +105,7 @@ def check_release(current_version):
 
     if Version(latest_version) > Version(current_version):
         print(f"有新版本({latest_version})了，更新后会自动重启程序")
-        url = f"https://gh-proxy.com/https://github.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
+        url = f"https://gitee.com/dunxuan/sdyu_seat/releases/download/{latest_version}/sdyu_seat.exe"
         wget.download(url, f"sdyu_seat_{latest_version}.exe")
 
         subprocess.Popen(
