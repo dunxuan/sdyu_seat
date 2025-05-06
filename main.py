@@ -12,9 +12,10 @@ from packaging.version import Version
 import tomli_w
 import requests
 
-current_version = "1.6.0"
+current_version = "1.6.1"
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0",
+    "Referer": "https://lxl.sdyu.edu.cn",
 }
 
 
@@ -376,24 +377,6 @@ def grab_seat():
         "type": "1",
         "operateChannel": "2",
     }
-    day = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-    book_headers = {
-        "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Encoding": "gzip, deflate, br, zstd",
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Host": "lxl.sdyu.edu.cn",
-        "Origin": "https://lxl.sdyu.edu.cn",
-        "Referer": f"https://lxl.sdyu.edu.cn/web/seat3?area={conf['seat']['seat_area']}&segment={conf['data']['segment']}&day={day}&startTime=18:00&endTime=22:30",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-origin",
-        # "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0",
-        "X-Requested-With": "XMLHttpRequest",
-        "sec-ch-ua": '"Microsoft Edge";v="133", "Not=A?Brand";v="8", "Chromium";v="133"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"Windows"',
-    }
-    merged_headers = {**headers, **book_headers}
     cookies = dict(
         access_token=conf["data"]["access_token"],
         expire=conf["data"]["expire"],
@@ -409,7 +392,7 @@ def grab_seat():
                 response = requests.post(
                     url=url,
                     data=data,
-                    headers=merged_headers,
+                    headers=headers,
                     cookies=cookies,
                     timeout=30,
                 )
