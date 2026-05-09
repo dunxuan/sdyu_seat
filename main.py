@@ -823,14 +823,13 @@ def main():
     conf = get_cookies()
     wait_reservation_start()
 
-    # 清除缓存，确保 grab_seat 拿到最新数据
     _booking_option_cache.clear()
-    sleep(2)  # 避免和最后一次心跳产生请求突发
+    sleep(2)
 
     print("开始抢座", end="", flush=True)
     grab_seat()
 
-    print("\n查询预约状态……")
+    print("\n\n查询预约状态……")
     get_reserved()
 
 
