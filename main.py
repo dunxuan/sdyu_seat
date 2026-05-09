@@ -21,7 +21,7 @@ except ImportError:
     AES = None
 
 
-current_version = "2.0.0"
+current_version = "2.0.1"
 base_url = "https://lxl.sdyu.edu.cn"
 default_start_time = "08:30"
 default_end_time = "22:30"
@@ -760,11 +760,17 @@ def format_reserved(item):
 
 def get_reserved():
     day = tomorrow()
-    while True:
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
         try:
             result = api_post("/v4/index/subscribe", auth=True)
             if result.get("code") != 0:
-                print(result.get("message") or result.get("msg") or "抢座失败")
+                msg = result.get("message") or result.get("msg") or "未知错误"
+                if attempt < max_retries:
+                    print(f"\r查询失败（{msg}），{3 - attempt}秒后重试...", end="", flush=True)
+                    sleep(3)
+                    continue
+                print(f"\n查询预约状态失败：{msg}")
                 break
             data = result.get("data") or []
             reserved = [
@@ -782,13 +788,18 @@ def get_reserved():
                     and item.get("statusname") != "使用中"
                     and not extract_day(item)
                 ]
-            if not reserved:
-                print("抢座失败")
-            for item in reserved:
-                print(format_reserved(item))
+            if reserved:
+                for item in reserved:
+                    print(format_reserved(item))
+            else:
+                print("未查询到明天的预约记录，抢座可能失败")
             break
         except Exception:
-            sleep(1)
+            if attempt < max_retries:
+                print(f"\r查询异常，{3 - attempt}秒后重试...", end="", flush=True)
+                sleep(3)
+            else:
+                print("\n查询预约状态失败：网络异常")
 
 
 def main():
@@ -819,10 +830,8 @@ def main():
     print("开始抢座", end="", flush=True)
     grab_seat()
 
-    print("\n\n查询预约状态……")
+    print("\n查询预约状态……")
     get_reserved()
-
-    print("\n如果没有明天的座位信息，说明抢座失败了")
 
 
 if __name__ == "__main__":
