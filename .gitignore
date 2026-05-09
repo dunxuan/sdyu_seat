@@ -3,6 +3,7 @@ __pycache__
 build
 *dist
 *.exe
+!upx/upx.exe
 test
 *.spec
 
